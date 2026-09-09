@@ -5,6 +5,7 @@ import mongoose from 'mongoose';
 import authRoutes from './routes/authRoutes.js';
 import societyRoutes from './routes/societyRoutes.js';
 import flatRoutes from './routes/flatRoutes.js';
+import complaintRoutes from './routes/complaintRoutes.js';
 
 dotenv.config();
 
@@ -28,6 +29,7 @@ app.use((req, res, next) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/societies', societyRoutes);
 app.use('/api/flats', flatRoutes);
+app.use('/api/complaints', complaintRoutes);
 
 // Health Check
 app.get('/api/health', (req, res) => {

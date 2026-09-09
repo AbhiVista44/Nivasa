@@ -4,6 +4,7 @@ import {
   Star,
 } from 'lucide-react';
 import { VendorProfileView } from '../../components/vendor/VendorProfileView';
+import { VendorJobsPanel } from '../../components/complaints/VendorJobsPanel';
 
 export const VendorDashboard = ({ activeTab }) => {
   const { user, society } = useAuth();
@@ -39,11 +40,9 @@ export const VendorDashboard = ({ activeTab }) => {
     return <VendorProfileView />;
   }
 
-  const handleUpdateStatus = (jobId, newStatus) => {
-    setJobs(prev =>
-      prev.map(j => (j.id === jobId ? { ...j, status: newStatus } : j))
-    );
-  };
+  if (activeTab === 'assigned-jobs' || activeTab === 'schedule' || activeTab === 'history') {
+    return <VendorJobsPanel />;
+  }
 
   return (
     <div className="space-y-6">

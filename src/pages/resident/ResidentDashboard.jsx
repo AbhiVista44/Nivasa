@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import {
   Wrench,
@@ -8,12 +8,31 @@ import {
   ArrowRight
 } from 'lucide-react';
 import { MyFlatHub } from '../../components/resident/MyFlatHub';
+import { ComplaintsPanel } from '../../components/complaints/ComplaintsPanel';
+import { ComplaintSubmitForm } from '../../components/complaints/ComplaintSubmitForm';
 
 export const ResidentDashboard = ({ activeTab, onNavigate }) => {
   const { user, society } = useAuth();
+  const [complaintView, setComplaintView] = useState('list'); // 'list' | 'form'
 
   if (activeTab === 'home') {
     return <MyFlatHub />;
+  }
+
+  if (activeTab === 'complaints') {
+    if (complaintView === 'form') {
+      return (
+        <ComplaintSubmitForm
+          onBack={() => setComplaintView('list')}
+          onSuccess={() => setComplaintView('list')}
+        />
+      );
+    }
+    return (
+      <ComplaintsPanel
+        onRaiseNew={() => setComplaintView('form')}
+      />
+    );
   }
 
   const quickActions = [

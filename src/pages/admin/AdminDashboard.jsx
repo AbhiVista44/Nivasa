@@ -10,12 +10,17 @@ import {
   Users
 } from 'lucide-react';
 import { ResidentsFlatsDirectory } from '../../components/admin/ResidentsFlatsDirectory';
+import { AdminComplaintsPanel } from '../../components/complaints/AdminComplaintsPanel';
 
 export const AdminDashboard = ({ activeTab, onNavigate }) => {
   const { society } = useAuth();
 
   if (activeTab === 'residents') {
     return <ResidentsFlatsDirectory />;
+  }
+
+  if (activeTab === 'complaints') {
+    return <AdminComplaintsPanel />;
   }
 
   const stats = [

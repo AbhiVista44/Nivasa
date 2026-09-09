@@ -4,13 +4,16 @@ import {
   QrCode,
   UserCheck,
   LogOut,
-  AlertTriangle
+  AlertTriangle,
+  PhoneCall
 } from 'lucide-react';
+import { IntercomDirectoryModal } from '../../components/security/IntercomDirectoryModal';
 
 export const SecurityDashboard = () => {
   const { user, society } = useAuth();
   const [passcode, setPasscode] = useState('');
   const [verificationResult, setVerificationResult] = useState(null);
+  const [isIntercomModalOpen, setIsIntercomModalOpen] = useState(false);
 
   const [activeInsideVisitors, setActiveInsideVisitors] = useState([
     { id: 'VIS-901', name: 'Mahesh Deshmukh', flat: 'B-402', type: 'Guest', entryTime: '3:15 PM', phone: '+91 98201 12345' },
@@ -66,12 +69,24 @@ export const SecurityDashboard = () => {
             <p className="text-[11px] text-amber-300 font-bold uppercase">Inside Society</p>
             <p className="text-2xl font-display font-extrabold text-white">{activeInsideVisitors.length} Active</p>
           </div>
+          <button
+            onClick={() => setIsIntercomModalOpen(true)}
+            className="flex items-center gap-1.5 px-4 py-3 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl text-xs shadow-md transition"
+          >
+            <PhoneCall className="w-4 h-4" />
+            Dial Intercom
+          </button>
           <button className="flex items-center gap-1.5 px-4 py-3 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-xl text-xs shadow-md transition">
             <AlertTriangle className="w-4 h-4" />
             Emergency
           </button>
         </div>
       </div>
+
+      <IntercomDirectoryModal
+        isOpen={isIntercomModalOpen}
+        onClose={() => setIsIntercomModalOpen(false)}
+      />
 
       {/* Action Split: Fast Passcode / QR Verifier + Walk-in Entry */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

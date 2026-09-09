@@ -7,9 +7,14 @@ import {
   CalendarDays,
   ArrowRight
 } from 'lucide-react';
+import { MyFlatHub } from '../../components/resident/MyFlatHub';
 
-export const ResidentDashboard = ({ onNavigate }) => {
+export const ResidentDashboard = ({ activeTab, onNavigate }) => {
   const { user, society } = useAuth();
+
+  if (activeTab === 'home') {
+    return <MyFlatHub />;
+  }
 
   const quickActions = [
     {

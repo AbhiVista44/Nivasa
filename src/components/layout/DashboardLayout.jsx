@@ -14,15 +14,15 @@ export const DashboardLayout = () => {
   const renderContent = () => {
     switch (role) {
       case 'admin':
-        return <AdminDashboard onNavigate={setActiveTab} />;
+        return <AdminDashboard activeTab={activeTab} onNavigate={setActiveTab} />;
       case 'resident':
-        return <ResidentDashboard onNavigate={setActiveTab} />;
+        return <ResidentDashboard activeTab={activeTab} onNavigate={setActiveTab} />;
       case 'security':
-        return <SecurityDashboard onNavigate={setActiveTab} />;
+        return <SecurityDashboard activeTab={activeTab} onNavigate={setActiveTab} />;
       case 'vendor':
-        return <VendorDashboard onNavigate={setActiveTab} />;
+        return <VendorDashboard activeTab={activeTab} onNavigate={setActiveTab} />;
       default:
-        return <ResidentDashboard onNavigate={setActiveTab} />;
+        return <ResidentDashboard activeTab={activeTab} onNavigate={setActiveTab} />;
     }
   };
 

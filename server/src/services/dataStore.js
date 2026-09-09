@@ -1,8 +1,9 @@
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
-import { initialSocieties, initialUsers } from '../data/seedData.js';
+import { initialSocieties, initialUsers, initialFlats } from '../data/seedData.js';
 import { User } from '../models/User.js';
 import { Society } from '../models/Society.js';
+import { Flat } from '../models/Flat.js';
 import mongoose from 'mongoose';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'nivasa_super_secret_jwt_key_2026_resident_community';
@@ -14,6 +15,7 @@ class DataStore {
       ...u,
       passwordHash: bcrypt.hashSync(u.password, 10),
     }));
+    this.flats = [...initialFlats];
     this.auditLogs = [];
     this.isSeeded = false;
   }
@@ -40,6 +42,15 @@ class DataStore {
           await User.create(u);
         }
       }
+
+      const flatCount = await Flat.countDocuments();
+      if (flatCount === 0) {
+        console.log('🌱 Auto-seeding initial society flats & resident units into MongoDB...');
+        for (const f of initialFlats) {
+          await Flat.create(f);
+        }
+      }
+
       this.isSeeded = true;
       console.log('✅ MongoDB seed sync completed.');
     } catch (err) {
@@ -106,6 +117,94 @@ class DataStore {
       if (dbUsers.length > 0) return dbUsers;
     }
     return this.users.map(({ passwordHash: _h, password: _p, ...rest }) => rest);
+  }
+
+  // --- Flats Management (Milestone 2) ---
+  async getFlats(societyId, query = {}) {
+    await this.ensureSeeded();
+    const { wing, status, search } = query;
+
+    if (this.isMongoConnected()) {
+      const filter = { societyId };
+      if (wing && wing !== 'all') {
+        filter.wing = new RegExp(wing, 'i');
+      }
+      if (status && status !== 'all') {
+        filter.status = status;
+      }
+      if (search) {
+        filter.$or = [
+          { flatNumber: new RegExp(search, 'i') },
+          { 'primaryResident.name': new RegExp(search, 'i') },
+          { 'primaryResident.phone': new RegExp(search, 'i') },
+        ];
+      }
+      return await Flat.find(filter).sort({ wing: 1, floor: 1, flatNumber: 1 });
+    }
+
+    // In-Memory fallback
+    return this.flats.filter(f => {
+      if (societyId && f.societyId.toString() !== societyId.toString()) return false;
+      if (wing && wing !== 'all' && !f.wing.toLowerCase().includes(wing.toLowerCase())) return false;
+      if (status && status !== 'all' && f.status !== status) return false;
+      if (search) {
+        const s = search.toLowerCase();
+        const matchFlat = f.flatNumber.toLowerCase().includes(s);
+        const matchName = f.primaryResident?.name?.toLowerCase().includes(s);
+        const matchPhone = f.primaryResident?.phone?.includes(s);
+        if (!matchFlat && !matchName && !matchPhone) return false;
+      }
+      return true;
+    });
+  }
+
+  async getFlatByNumber(societyId, flatNumber) {
+    await this.ensureSeeded();
+    if (this.isMongoConnected()) {
+      return await Flat.findOne({ societyId, flatNumber });
+    }
+    return this.flats.find(f => f.societyId.toString() === societyId.toString() && f.flatNumber === flatNumber);
+  }
+
+  async getFlatById(id) {
+    await this.ensureSeeded();
+    if (this.isMongoConnected()) {
+      return await Flat.findById(id);
+    }
+    return this.flats.find(f => f._id.toString() === id.toString());
+  }
+
+  async addFamilyMember(societyId, flatNumber, member) {
+    await this.ensureSeeded();
+    if (this.isMongoConnected()) {
+      const flat = await Flat.findOne({ societyId, flatNumber });
+      if (!flat) return null;
+      flat.familyMembers.push(member);
+      await flat.save();
+      return flat;
+    }
+
+    const flat = this.flats.find(f => f.societyId.toString() === societyId.toString() && f.flatNumber === flatNumber);
+    if (!flat) return null;
+    flat.familyMembers = flat.familyMembers || [];
+    flat.familyMembers.push(member);
+    return flat;
+  }
+
+  async removeFamilyMember(societyId, flatNumber, memberName) {
+    await this.ensureSeeded();
+    if (this.isMongoConnected()) {
+      const flat = await Flat.findOne({ societyId, flatNumber });
+      if (!flat) return null;
+      flat.familyMembers = flat.familyMembers.filter(m => m.name !== memberName);
+      await flat.save();
+      return flat;
+    }
+
+    const flat = this.flats.find(f => f.societyId.toString() === societyId.toString() && f.flatNumber === flatNumber);
+    if (!flat) return null;
+    flat.familyMembers = (flat.familyMembers || []).filter(m => m.name !== memberName);
+    return flat;
   }
 
   async logAction(actionData) {

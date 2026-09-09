@@ -6,11 +6,17 @@ import {
   CalendarDays,
   Plus,
   ArrowUpRight,
-  Building2
+  Building2,
+  Users
 } from 'lucide-react';
+import { ResidentsFlatsDirectory } from '../../components/admin/ResidentsFlatsDirectory';
 
-export const AdminDashboard = () => {
+export const AdminDashboard = ({ activeTab, onNavigate }) => {
   const { society } = useAuth();
+
+  if (activeTab === 'residents') {
+    return <ResidentsFlatsDirectory />;
+  }
 
   const stats = [
     { title: 'Total Registered Flats', value: '160 / 160', sub: '100% occupied', icon: Building2, color: 'text-teal-700 bg-teal-50 border-teal-200' },
@@ -53,8 +59,12 @@ export const AdminDashboard = () => {
             <Plus className="w-4 h-4" />
             New Notice
           </button>
-          <button className="flex items-center gap-1.5 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white font-semibold rounded-xl text-xs border border-slate-700 transition">
-            Register Resident
+          <button
+            onClick={() => onNavigate?.('residents')}
+            className="flex items-center gap-1.5 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white font-semibold rounded-xl text-xs border border-slate-700 transition"
+          >
+            <Users className="w-4 h-4" />
+            Flats & Resident Directory
           </button>
         </div>
       </div>

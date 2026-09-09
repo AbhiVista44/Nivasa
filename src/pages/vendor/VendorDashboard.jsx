@@ -3,8 +3,9 @@ import { useAuth } from '../../context/AuthContext';
 import {
   Star,
 } from 'lucide-react';
+import { VendorProfileView } from '../../components/vendor/VendorProfileView';
 
-export const VendorDashboard = () => {
+export const VendorDashboard = ({ activeTab }) => {
   const { user, society } = useAuth();
 
   const [jobs, setJobs] = useState([
@@ -33,6 +34,10 @@ export const VendorDashboard = () => {
       notes: 'Low pressure in master toilet flush valve.',
     },
   ]);
+
+  if (activeTab === 'profile') {
+    return <VendorProfileView />;
+  }
 
   const handleUpdateStatus = (jobId, newStatus) => {
     setJobs(prev =>

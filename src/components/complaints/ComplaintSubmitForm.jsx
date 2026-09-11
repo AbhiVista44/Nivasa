@@ -37,6 +37,48 @@ const TIME_SLOTS = [
   'Weekends only',
 ];
 
+const localFallbackClassify = (text) => {
+  const lower = (text || '').toLowerCase();
+  let category = 'General';
+  let priority = 'Medium';
+
+  const plumbingKeywords = ['leak', 'pipe', 'tap', 'water', 'flush', 'drain', 'sink', 'basin', 'plumbing', 'faucet', 'sewage', 'clog', 'commode', 'overflow', 'geyser'];
+  const electricalKeywords = ['spark', 'light', 'wire', 'switch', 'mcb', 'power', 'fluctuation', 'short circuit', 'socket', 'fuse', 'fan', 'bulb', 'shock', 'voltage'];
+  const carpentryKeywords = ['door', 'hinge', 'window', 'wood', 'lock', 'handle', 'cabinet', 'wardrobe', 'drawer', 'latch', 'shutter'];
+  const civilKeywords = ['seepage', 'crack', 'wall', 'plaster', 'tile', 'paint', 'ceiling', 'balcony', 'cement', 'damp', 'leakage'];
+  const cleaningKeywords = ['garbage', 'smell', 'pest', 'cockroach', 'termite', 'clean', 'dustbin', 'rodent', 'mosquito', 'hygiene'];
+  const appliancesKeywords = ['ac', 'air conditioner', 'refrigerator', 'fridge', 'washing machine', 'microwave', 'chimney', 'inverter'];
+  const securityKeywords = ['cctv', 'guard', 'gate', 'intercom', 'intruder', 'theft', 'unauthorized', 'parking dispute'];
+
+  if (plumbingKeywords.some(k => lower.includes(k))) category = 'Plumbing';
+  else if (electricalKeywords.some(k => lower.includes(k))) category = 'Electrical';
+  else if (civilKeywords.some(k => lower.includes(k))) category = 'Civil & Painting';
+  else if (carpentryKeywords.some(k => lower.includes(k))) category = 'Carpentry';
+  else if (appliancesKeywords.some(k => lower.includes(k))) category = 'Appliances';
+  else if (cleaningKeywords.some(k => lower.includes(k))) category = 'Cleaning';
+  else if (securityKeywords.some(k => lower.includes(k))) category = 'Security';
+
+  const emergencyKeywords = ['emergency', 'flooding', 'sparking', 'fire', 'shock', 'danger', 'burst', 'collapsed', 'gas leak'];
+  const highKeywords = ['heavy leak', 'leaking from ceiling', 'no power', 'power outage', 'main switch', 'short circuit', 'blocked', 'overflowing', 'urgent', 'asap'];
+  const lowKeywords = ['creaking', 'loose', 'minor', 'cosmetic', 'paint chip', 'slow drip', 'aesthetic'];
+
+  if (emergencyKeywords.some(k => lower.includes(k))) priority = 'Emergency';
+  else if (highKeywords.some(k => lower.includes(k)) || (category === 'Plumbing' && lower.includes('ceiling'))) priority = 'High';
+  else if (lowKeywords.some(k => lower.includes(k))) priority = 'Low';
+
+  let summary = text.trim();
+  if (summary.length > 80) summary = summary.slice(0, 77) + '...';
+  if (!summary.endsWith('.')) summary += '.';
+
+  return {
+    category,
+    priority,
+    summary,
+    source: 'smart-heuristic',
+    confidence: 0.90,
+  };
+};
+
 export const ComplaintSubmitForm = ({ onBack, onSuccess }) => {
   const { user } = useAuth();
 
@@ -76,10 +118,17 @@ export const ComplaintSubmitForm = ({ onBack, onSuccess }) => {
           setCategory(result.category);
           setPriority(result.priority);
         }
+        return;
       }
-    } catch {
-      // Fallback – local heuristic already runs on server but try inline hint
-      setAiError('AI service unavailable, please select category manually.');
+    } catch (err) {
+      // Graceful instant fallback to smart heuristic
+      const fallbackResult = localFallbackClassify(text);
+      setAiResult(fallbackResult);
+      setAiOverridden(false);
+      if (!aiOverridden) {
+        setCategory(fallbackResult.category);
+        setPriority(fallbackResult.priority);
+      }
     } finally {
       setAiLoading(false);
     }

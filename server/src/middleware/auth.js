@@ -1,5 +1,5 @@
 import jwt from 'jsonwebtoken';
-import { User } from '../models/User.js';
+import { dataStore } from '../services/dataStore.js';
 
 export const verifyToken = async (req, res, next) => {
   try {
@@ -11,7 +11,7 @@ export const verifyToken = async (req, res, next) => {
     const token = authHeader.split(' ')[1];
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'nivasa_super_secret_jwt_key_2026_resident_community');
 
-    const user = await User.findById(decoded.id).select('-password');
+    const user = await dataStore.findUserById(decoded.id);
     if (!user) {
       return res.status(401).json({ success: false, message: 'User not found or session expired.' });
     }

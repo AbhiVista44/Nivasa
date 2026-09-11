@@ -6,7 +6,7 @@ import { verifyToken, requireRoles } from '../middleware/auth.js';
 const router = express.Router();
 
 // 1. AI Auto-Classification endpoint (can be called live from UI as resident types or clicks "Analyze with AI")
-router.post('/classify-ai', verifyToken, async (req, res) => {
+router.post('/classify-ai', async (req, res) => {
   try {
     const { description } = req.body;
     if (!description || !description.trim()) {

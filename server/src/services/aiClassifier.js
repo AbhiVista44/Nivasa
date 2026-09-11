@@ -34,11 +34,15 @@ export async function classifyComplaint(text) {
     const candidateModels = [
       process.env.GROQ_MODEL,
       'openai/gpt-oss-20b',
+      'llama-3.3-70b-versatile',
+      'llama-3.1-8b-instant',
       'qwen/qwen3.8-27b',
-      'openai/gpt-oss-120b',
     ].filter(Boolean);
 
-    for (const model of candidateModels) {
+    // Deduplicate models
+    const uniqueModels = [...new Set(candidateModels)];
+
+    for (const model of uniqueModels) {
       try {
         const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
           method: 'POST',
@@ -46,6 +50,7 @@ export async function classifyComplaint(text) {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${groqApiKey.trim()}`,
           },
+          signal: AbortSignal.timeout(6000),
           body: JSON.stringify({
             model,
             temperature: 0.1,
@@ -96,6 +101,9 @@ Output strictly the JSON object, nothing else.`,
               }
             }
           }
+        } else {
+          const errBody = await response.text();
+          console.warn(`Groq API (${model}) returned HTTP ${response.status}: ${errBody}`);
         }
       } catch (err) {
         console.warn(`Groq API (${model}) failed: ${err.message}. Trying fallback...`);

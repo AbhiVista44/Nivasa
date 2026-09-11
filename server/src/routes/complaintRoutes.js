@@ -1,6 +1,7 @@
 import express from 'express';
 import { dataStore } from '../services/dataStore.js';
 import { classifyComplaint } from '../services/aiClassifier.js';
+import { storageService } from '../services/storageService.js';
 import { verifyToken, requireRoles } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -103,6 +104,27 @@ router.post('/', verifyToken, async (req, res) => {
       };
     }
 
+    // Upload any base64 photos to Backblaze B2 (with local fallback)
+    const resolvedPhotos = [];
+    if (Array.isArray(photos)) {
+      for (const p of photos) {
+        if (typeof p === 'string' && p.startsWith('data:image')) {
+          try {
+            const uploaded = await storageService.uploadImage({
+              dataUri: p,
+              folder: 'complaints',
+            });
+            resolvedPhotos.push(uploaded.url);
+          } catch (err) {
+            console.warn('Complaint photo upload error:', err.message);
+            resolvedPhotos.push(p);
+          }
+        } else if (typeof p === 'string' && p.trim()) {
+          resolvedPhotos.push(p);
+        }
+      }
+    }
+
     const complaintData = {
       societyId,
       residentId,
@@ -115,7 +137,7 @@ router.post('/', verifyToken, async (req, res) => {
       category: category || finalAiClassification?.suggestedCategory || 'General',
       priority: priority || finalAiClassification?.suggestedPriority || 'Medium',
       preferredVisitTime: preferredVisitTime || 'Anytime during daytime',
-      photos,
+      photos: resolvedPhotos,
       aiClassification: finalAiClassification,
     };
 

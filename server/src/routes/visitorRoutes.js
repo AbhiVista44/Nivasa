@@ -1,5 +1,6 @@
 import express from 'express';
 import { dataStore } from '../services/dataStore.js';
+import { storageService } from '../services/storageService.js';
 import { verifyToken, requireRoles } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -117,6 +118,20 @@ router.post('/walk-in', verifyToken, requireRoles('security', 'admin'), async (r
       return res.status(400).json({ success: false, message: 'Visitor name and destination flat are required.' });
     }
 
+    // If photo is captured via webcam as base64 Data URI, upload to Backblaze B2
+    let resolvedPhotoUrl = photoUrl || '';
+    if (photoUrl && typeof photoUrl === 'string' && photoUrl.startsWith('data:image')) {
+      try {
+        const uploadResult = await storageService.uploadImage({
+          dataUri: photoUrl,
+          folder: 'visitors',
+        });
+        resolvedPhotoUrl = uploadResult.url;
+      } catch (uploadErr) {
+        console.warn('Visitor photo upload to storage failed:', uploadErr.message);
+      }
+    }
+
     const visitor = await dataStore.registerWalkInVisitor(
       {
         name,
@@ -126,7 +141,7 @@ router.post('/walk-in', verifyToken, requireRoles('security', 'admin'), async (r
         wing: wing || '',
         type: type || 'Guest',
         autoApprove: !!autoApprove,
-        photoUrl: photoUrl || '',
+        photoUrl: resolvedPhotoUrl,
         societyId: req.user.societyId,
       },
       req.user

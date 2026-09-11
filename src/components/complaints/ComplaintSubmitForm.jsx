@@ -87,7 +87,25 @@ export const ComplaintSubmitForm = ({ onBack, onSuccess }) => {
   const [category, setCategory] = useState('');
   const [priority, setPriority] = useState('Medium');
   const [preferredVisitTime, setPreferredVisitTime] = useState(TIME_SLOTS[0]);
-  const [photos] = useState([]);
+  const [photos, setPhotos] = useState([]);
+  const fileInputRef = useRef(null);
+
+  const handlePhotoSelect = (e) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+
+    files.slice(0, 5 - photos.length).forEach((file) => {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        setPhotos((prev) => [...prev, event.target.result]);
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleRemovePhoto = (idx) => {
+    setPhotos((prev) => prev.filter((_, i) => i !== idx));
+  };
 
   const [aiResult, setAiResult] = useState(null);
   const [aiLoading, setAiLoading] = useState(false);
@@ -518,21 +536,57 @@ export const ComplaintSubmitForm = ({ onBack, onSuccess }) => {
           </div>
         </div>
 
-        {/* Photo Upload (Visual Placeholder) */}
+        {/* Photo Upload with Backblaze B2 Storage */}
         <div className="space-y-2">
-          <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-            <Camera className="inline w-3.5 h-3.5 mr-1 -mt-0.5" />
-            Attach Photos (Optional)
-          </label>
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+              <Camera className="inline w-3.5 h-3.5 mr-1 -mt-0.5" />
+              Attach Photos of the Issue (Optional)
+            </label>
+            <span className="text-[11px] text-slate-400 font-medium">{photos.length}/5 photos</span>
+          </div>
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            accept="image/jpeg,image/png,image/webp,image/jpg"
+            className="hidden"
+            onChange={handlePhotoSelect}
+          />
+
           <div className="flex items-center gap-3 flex-wrap">
-            <div className="w-24 h-24 rounded-xl border-2 border-dashed border-slate-300 flex flex-col items-center justify-center text-slate-400 hover:border-teal-400 hover:text-teal-600 cursor-pointer transition group">
-              <Camera className="w-5 h-5 group-hover:scale-110 transition" />
-              <span className="text-[10px] mt-1 font-medium">Add Photo</span>
-            </div>
-            <p className="text-[11px] text-slate-400">
-              Supported: JPG, PNG, HEIC<br />Max 5 photos • 5 MB each<br />
-              <span className="text-teal-600">File upload will be available once MongoDB is connected.</span>
-            </p>
+            {photos.map((src, idx) => (
+              <div key={idx} className="relative w-24 h-24 rounded-2xl overflow-hidden border border-slate-200 group shadow-xs">
+                <img src={src} alt={`Preview ${idx + 1}`} className="w-full h-full object-cover" />
+                <button
+                  type="button"
+                  onClick={() => handleRemovePhoto(idx)}
+                  className="absolute top-1 right-1 p-1 bg-slate-950/70 hover:bg-rose-600 text-white rounded-full transition"
+                  title="Remove photo"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+            ))}
+
+            {photos.length < 5 && (
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="w-24 h-24 rounded-2xl border-2 border-dashed border-slate-300 hover:border-teal-500 hover:bg-teal-50/40 flex flex-col items-center justify-center text-slate-400 hover:text-teal-700 cursor-pointer transition group"
+              >
+                <Camera className="w-5 h-5 group-hover:scale-110 transition" />
+                <span className="text-[10px] mt-1 font-bold">Add Photo</span>
+              </button>
+            )}
+
+            {photos.length === 0 && (
+              <div className="text-[11px] text-slate-400 leading-tight">
+                <p>Attach visual proof for faster technician diagnosis.</p>
+                <p className="text-[10px] text-teal-700 font-semibold mt-0.5">Images securely stored on Backblaze B2 cloud storage.</p>
+              </div>
+            )}
           </div>
         </div>
 

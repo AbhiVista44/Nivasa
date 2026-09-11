@@ -9,6 +9,7 @@ import societyRoutes from './routes/societyRoutes.js';
 import flatRoutes from './routes/flatRoutes.js';
 import complaintRoutes from './routes/complaintRoutes.js';
 import visitorRoutes from './routes/visitorRoutes.js';
+import uploadRoutes from './routes/uploadRoutes.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -24,7 +25,11 @@ app.use(cors({
   origin: '*',
   credentials: true,
 }));
-app.use(express.json());
+app.use(express.json({ limit: '15mb' }));
+app.use(express.urlencoded({ limit: '15mb', extended: true }));
+
+// Serve local fallback uploads statically
+app.use('/uploads', express.static(path.resolve(__dirname, '../public/uploads')));
 
 // Request logger for debugging & traceability
 app.use((req, res, next) => {
@@ -38,6 +43,7 @@ app.use('/api/societies', societyRoutes);
 app.use('/api/flats', flatRoutes);
 app.use('/api/complaints', complaintRoutes);
 app.use('/api/visitors', visitorRoutes);
+app.use('/api/upload', uploadRoutes);
 
 // Health Check
 app.get('/api/health', (req, res) => {

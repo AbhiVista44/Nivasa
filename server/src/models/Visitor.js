@@ -49,8 +49,8 @@ const visitorSchema = new mongoose.Schema({
   },
   phone: {
     type: String,
-    required: true,
     trim: true,
+    default: '',
   },
   vehicleNumber: {
     type: String,

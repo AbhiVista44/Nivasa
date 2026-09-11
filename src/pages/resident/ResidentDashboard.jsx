@@ -10,6 +10,8 @@ import {
 import { MyFlatHub } from '../../components/resident/MyFlatHub';
 import { ComplaintsPanel } from '../../components/complaints/ComplaintsPanel';
 import { ComplaintSubmitForm } from '../../components/complaints/ComplaintSubmitForm';
+import { ResidentVisitorsPanel } from '../../components/visitors/ResidentVisitorsPanel';
+import { ResidentApprovalsBanner } from '../../components/visitors/ResidentApprovalsBanner';
 
 export const ResidentDashboard = ({ activeTab, onNavigate }) => {
   const { user, society } = useAuth();
@@ -33,6 +35,10 @@ export const ResidentDashboard = ({ activeTab, onNavigate }) => {
         onRaiseNew={() => setComplaintView('form')}
       />
     );
+  }
+
+  if (activeTab === 'visitors') {
+    return <ResidentVisitorsPanel />;
   }
 
   const quickActions = [
@@ -77,6 +83,9 @@ export const ResidentDashboard = ({ activeTab, onNavigate }) => {
   return (
     <div className="space-y-6">
       
+      {/* Real-Time Gate Approvals Alert */}
+      <ResidentApprovalsBanner />
+
       {/* Resident Flat Card Header */}
       <div className="bg-gradient-to-r from-teal-900 via-teal-800 to-slate-900 rounded-2xl p-6 text-white shadow-lg shadow-teal-950/20 border border-teal-700 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="space-y-1">

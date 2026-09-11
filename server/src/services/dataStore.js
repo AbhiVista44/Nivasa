@@ -1,10 +1,11 @@
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
-import { initialSocieties, initialUsers, initialFlats, initialComplaints } from '../data/seedData.js';
+import { initialSocieties, initialUsers, initialFlats, initialComplaints, initialVisitors } from '../data/seedData.js';
 import { User } from '../models/User.js';
 import { Society } from '../models/Society.js';
 import { Flat } from '../models/Flat.js';
 import { Complaint } from '../models/Complaint.js';
+import { Visitor } from '../models/Visitor.js';
 import mongoose from 'mongoose';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'nivasa_super_secret_jwt_key_2026_resident_community';
@@ -18,6 +19,7 @@ class DataStore {
     }));
     this.flats = [...initialFlats];
     this.complaints = [...initialComplaints];
+    this.visitors = [...initialVisitors];
     this.auditLogs = [];
     this.isSeeded = false;
   }
@@ -58,6 +60,14 @@ class DataStore {
         console.log('🌱 Auto-seeding initial maintenance complaints with 9-stage lifecycle into MongoDB...');
         for (const c of initialComplaints) {
           await Complaint.create(c);
+        }
+      }
+
+      const visitorCount = await Visitor.countDocuments();
+      if (visitorCount === 0) {
+        console.log('🌱 Auto-seeding initial gate visitors & passes into MongoDB...');
+        for (const v of initialVisitors) {
+          await Visitor.create(v);
         }
       }
 
@@ -480,6 +490,352 @@ class DataStore {
     return this.auditLogs
       .filter(l => !societyId || l.societyId.toString() === societyId.toString())
       .slice(0, limit);
+  }
+
+  // --- Visitor Management & Gate Operations (Milestone 4) ---
+
+  async getVisitors(societyId, query = {}) {
+    await this.ensureSeeded();
+    const { status, flatNumber, type, search } = query;
+
+    if (this.isMongoConnected()) {
+      const filter = { societyId };
+      if (status && status !== 'all') {
+        if (status === 'inside') filter.status = 'Inside';
+        else if (status === 'pre-approved') filter.status = 'Pre-Approved';
+        else if (status === 'pending') filter.status = 'Pending Approval';
+        else filter.status = status;
+      }
+      if (flatNumber) filter.flatNumber = flatNumber;
+      if (type && type !== 'all') filter.type = type;
+      if (search) {
+        filter.$or = [
+          { name: new RegExp(search, 'i') },
+          { phone: new RegExp(search, 'i') },
+          { visitorNumber: new RegExp(search, 'i') },
+          { passcode: new RegExp(search, 'i') },
+          { vehicleNumber: new RegExp(search, 'i') },
+          { flatNumber: new RegExp(search, 'i') },
+        ];
+      }
+      return await Visitor.find(filter).sort({ createdAt: -1 });
+    }
+
+    // In-memory fallback
+    return this.visitors
+      .filter(v => {
+        if (societyId && v.societyId.toString() !== societyId.toString()) return false;
+        if (status && status !== 'all') {
+          if (status === 'inside' && v.status !== 'Inside') return false;
+          if (status === 'pre-approved' && v.status !== 'Pre-Approved') return false;
+          if (status === 'pending' && v.status !== 'Pending Approval') return false;
+          if (!['inside', 'pre-approved', 'pending'].includes(status) && v.status !== status) return false;
+        }
+        if (flatNumber && v.flatNumber !== flatNumber) return false;
+        if (type && type !== 'all' && v.type !== type) return false;
+        if (search) {
+          const s = search.toLowerCase();
+          const matchName = v.name?.toLowerCase().includes(s);
+          const matchPhone = v.phone?.includes(s);
+          const matchNum = v.visitorNumber?.toLowerCase().includes(s);
+          const matchCode = v.passcode?.includes(s);
+          const matchFlat = v.flatNumber?.toLowerCase().includes(s);
+          if (!matchName && !matchPhone && !matchNum && !matchCode && !matchFlat) return false;
+        }
+        return true;
+      })
+      .sort((a, b) => new Date(b.createdAt || b.entryTime || Date.now()) - new Date(a.createdAt || a.entryTime || Date.now()));
+  }
+
+  async getInsideVisitors(societyId) {
+    await this.ensureSeeded();
+    if (this.isMongoConnected()) {
+      return await Visitor.find({ societyId, status: 'Inside' }).sort({ entryTime: -1 });
+    }
+    return this.visitors
+      .filter(v => v.status === 'Inside' && (!societyId || v.societyId.toString() === societyId.toString()))
+      .sort((a, b) => new Date(b.entryTime || Date.now()) - new Date(a.entryTime || Date.now()));
+  }
+
+  async getPendingApprovals(societyId, flatNumber) {
+    await this.ensureSeeded();
+    if (this.isMongoConnected()) {
+      const filter = { societyId, status: 'Pending Approval' };
+      if (flatNumber) filter.flatNumber = flatNumber;
+      return await Visitor.find(filter).sort({ createdAt: -1 });
+    }
+    return this.visitors
+      .filter(v => {
+        if (v.status !== 'Pending Approval') return false;
+        if (societyId && v.societyId.toString() !== societyId.toString()) return false;
+        if (flatNumber && v.flatNumber !== flatNumber) return false;
+        return true;
+      })
+      .sort((a, b) => new Date(b.createdAt || Date.now()) - new Date(a.createdAt || Date.now()));
+  }
+
+  async getVisitorById(id) {
+    await this.ensureSeeded();
+    if (this.isMongoConnected()) {
+      return await Visitor.findById(id);
+    }
+    return this.visitors.find(v => v._id.toString() === id.toString() || v.visitorNumber === id);
+  }
+
+  async createPreAuthorization(data, resident) {
+    await this.ensureSeeded();
+    // Generate 6-digit PIN that is non-trivial
+    const passcode = Math.floor(100000 + Math.random() * 900000).toString();
+    const count = this.visitors.length + 1;
+    const visitorNumber = `VIS-${Date.now().toString().slice(-4)}${Math.floor(Math.random() * 90 + 10)}`;
+
+    const newVisitor = {
+      _id: 'vis_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
+      societyId: resident.societyId,
+      visitorNumber,
+      passcode,
+      name: data.name,
+      phone: data.phone,
+      vehicleNumber: data.vehicleNumber || '',
+      photoUrl: data.photoUrl || '',
+      flatNumber: resident.flatNumber || data.flatNumber || 'B-402',
+      wing: resident.wing || data.wing || 'Wing B',
+      hostResidentId: resident._id || resident.id,
+      hostResidentName: resident.name,
+      type: data.type || 'Guest',
+      status: 'Pre-Approved',
+      expectedDate: data.expectedDate ? new Date(data.expectedDate) : new Date(),
+      expectedTimeSlot: data.expectedTimeSlot || 'Anytime',
+      entryGate: 'Gate 1',
+      timeline: [
+        {
+          stage: 'Pre-Approved',
+          timestamp: new Date(),
+          actor: resident.name,
+          role: 'resident',
+          note: `Pre-authorized pass generated by ${resident.name} for ${data.name}. Passcode: ${passcode}`,
+        },
+      ],
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    if (this.isMongoConnected()) {
+      const dbVisitor = await Visitor.create(newVisitor);
+      return dbVisitor;
+    }
+
+    this.visitors.unshift(newVisitor);
+    return newVisitor;
+  }
+
+  async registerWalkInVisitor(data, guard) {
+    await this.ensureSeeded();
+    const passcode = Math.floor(100000 + Math.random() * 900000).toString();
+    const visitorNumber = `WLK-${Date.now().toString().slice(-4)}${Math.floor(Math.random() * 90 + 10)}`;
+
+    const initialStatus = data.autoApprove ? 'Inside' : 'Pending Approval';
+    const timeline = [
+      {
+        stage: 'Walk-In Registered',
+        timestamp: new Date(),
+        actor: guard?.name || 'Gate Security',
+        role: 'security',
+        note: `Registered at ${guard?.gatePost || 'Gate 1'}. Destination: Flat ${data.flatNumber}.`,
+      },
+    ];
+
+    if (data.autoApprove) {
+      timeline.push({
+        stage: 'Gate Entry Authorized',
+        timestamp: new Date(),
+        actor: guard?.name || 'Gate Security',
+        role: 'security',
+        note: `Direct entry authorized by security for ${data.type || 'Visitor'}.`,
+      });
+    }
+
+    const newVisitor = {
+      _id: 'vis_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
+      societyId: guard.societyId || data.societyId,
+      visitorNumber,
+      passcode,
+      name: data.name,
+      phone: data.phone,
+      vehicleNumber: data.vehicleNumber || '',
+      photoUrl: data.photoUrl || '',
+      flatNumber: data.flatNumber,
+      wing: data.wing || '',
+      hostResidentName: data.hostResidentName || '',
+      type: data.type || 'Guest',
+      status: initialStatus,
+      entryTime: data.autoApprove ? new Date() : null,
+      entryGate: guard?.gatePost || 'Gate 1',
+      securityGuardName: guard?.name || 'Vikram Singh',
+      securityGuardBadge: guard?.badgeNumber || 'SEC-089',
+      timeline,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    if (this.isMongoConnected()) {
+      const dbVisitor = await Visitor.create(newVisitor);
+      return dbVisitor;
+    }
+
+    this.visitors.unshift(newVisitor);
+    return newVisitor;
+  }
+
+  async verifyPasscode(societyId, code) {
+    await this.ensureSeeded();
+    const trimmed = (code || '').trim();
+
+    if (this.isMongoConnected()) {
+      // Find active pass
+      return await Visitor.findOne({
+        societyId,
+        passcode: trimmed,
+        status: { $in: ['Pre-Approved', 'Approved'] },
+      });
+    }
+
+    return this.visitors.find(v =>
+      v.passcode === trimmed &&
+      (!societyId || v.societyId.toString() === societyId.toString()) &&
+      ['Pre-Approved', 'Approved'].includes(v.status)
+    );
+  }
+
+  async recordEntry(id, guard) {
+    await this.ensureSeeded();
+    const timelineEvent = {
+      stage: 'Gate Entry Authorized',
+      timestamp: new Date(),
+      actor: guard?.name || 'Security Officer',
+      role: 'security',
+      note: `Gate pass verified at ${guard?.gatePost || 'Gate 1'}. Visitor entered society.`,
+    };
+
+    if (this.isMongoConnected()) {
+      const visitor = await Visitor.findById(id);
+      if (!visitor) return null;
+      visitor.status = 'Inside';
+      visitor.entryTime = new Date();
+      visitor.entryGate = guard?.gatePost || visitor.entryGate || 'Gate 1';
+      visitor.securityGuardName = guard?.name || visitor.securityGuardName;
+      visitor.securityGuardBadge = guard?.badgeNumber || visitor.securityGuardBadge;
+      visitor.timeline.push(timelineEvent);
+      visitor.updatedAt = new Date();
+      await visitor.save();
+      return visitor;
+    }
+
+    const visitor = this.visitors.find(v => v._id.toString() === id.toString() || v.visitorNumber === id);
+    if (!visitor) return null;
+    visitor.status = 'Inside';
+    visitor.entryTime = new Date();
+    visitor.entryGate = guard?.gatePost || visitor.entryGate || 'Gate 1';
+    visitor.securityGuardName = guard?.name || visitor.securityGuardName;
+    visitor.securityGuardBadge = guard?.badgeNumber || visitor.securityGuardBadge;
+    visitor.timeline = visitor.timeline || [];
+    visitor.timeline.push(timelineEvent);
+    visitor.updatedAt = new Date();
+    return visitor;
+  }
+
+  async recordExit(id, guard) {
+    await this.ensureSeeded();
+    const timelineEvent = {
+      stage: 'Gate Exit Recorded',
+      timestamp: new Date(),
+      actor: guard?.name || 'Security Officer',
+      role: 'security',
+      note: `Logged exit at ${guard?.gatePost || 'Gate 1'}. Society departure recorded.`,
+    };
+
+    if (this.isMongoConnected()) {
+      const visitor = await Visitor.findById(id);
+      if (!visitor) return null;
+      visitor.status = 'Exited';
+      visitor.exitTime = new Date();
+      visitor.exitGate = guard?.gatePost || 'Gate 1';
+      visitor.timeline.push(timelineEvent);
+      visitor.updatedAt = new Date();
+      await visitor.save();
+      return visitor;
+    }
+
+    const visitor = this.visitors.find(v => v._id.toString() === id.toString() || v.visitorNumber === id);
+    if (!visitor) return null;
+    visitor.status = 'Exited';
+    visitor.exitTime = new Date();
+    visitor.exitGate = guard?.gatePost || 'Gate 1';
+    visitor.timeline = visitor.timeline || [];
+    visitor.timeline.push(timelineEvent);
+    visitor.updatedAt = new Date();
+    return visitor;
+  }
+
+  async respondToApproval(id, approved, notes, resident) {
+    await this.ensureSeeded();
+    const stage = approved ? 'Approved' : 'Rejected';
+    const timelineEvent = {
+      stage: `Resident ${stage}`,
+      timestamp: new Date(),
+      actor: resident?.name || 'Resident',
+      role: 'resident',
+      note: notes || (approved ? 'Entry approved by resident.' : 'Entry denied by resident.'),
+    };
+
+    if (this.isMongoConnected()) {
+      const visitor = await Visitor.findById(id);
+      if (!visitor) return null;
+      visitor.status = stage;
+      visitor.approvalNotes = notes || '';
+      visitor.timeline.push(timelineEvent);
+      visitor.updatedAt = new Date();
+      await visitor.save();
+      return visitor;
+    }
+
+    const visitor = this.visitors.find(v => v._id.toString() === id.toString() || v.visitorNumber === id);
+    if (!visitor) return null;
+    visitor.status = stage;
+    visitor.approvalNotes = notes || '';
+    visitor.timeline = visitor.timeline || [];
+    visitor.timeline.push(timelineEvent);
+    visitor.updatedAt = new Date();
+    return visitor;
+  }
+
+  async revokePass(id, resident) {
+    await this.ensureSeeded();
+    const timelineEvent = {
+      stage: 'Pass Revoked',
+      timestamp: new Date(),
+      actor: resident?.name || 'Resident',
+      role: 'resident',
+      note: 'Pre-authorized pass cancelled by resident before arrival.',
+    };
+
+    if (this.isMongoConnected()) {
+      const visitor = await Visitor.findById(id);
+      if (!visitor) return null;
+      visitor.status = 'Revoked';
+      visitor.timeline.push(timelineEvent);
+      visitor.updatedAt = new Date();
+      await visitor.save();
+      return visitor;
+    }
+
+    const visitor = this.visitors.find(v => v._id.toString() === id.toString() || v.visitorNumber === id);
+    if (!visitor) return null;
+    visitor.status = 'Revoked';
+    visitor.timeline = visitor.timeline || [];
+    visitor.timeline.push(timelineEvent);
+    visitor.updatedAt = new Date();
+    return visitor;
   }
 }
 

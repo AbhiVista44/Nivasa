@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { ResidentsFlatsDirectory } from '../../components/admin/ResidentsFlatsDirectory';
 import { AdminComplaintsPanel } from '../../components/complaints/AdminComplaintsPanel';
+import { AdminVisitorsView } from '../../components/admin/AdminVisitorsView';
 
 export const AdminDashboard = ({ activeTab, onNavigate }) => {
   const { society } = useAuth();
@@ -21,6 +22,10 @@ export const AdminDashboard = ({ activeTab, onNavigate }) => {
 
   if (activeTab === 'complaints') {
     return <AdminComplaintsPanel />;
+  }
+
+  if (activeTab === 'gate') {
+    return <AdminVisitorsView />;
   }
 
   const stats = [

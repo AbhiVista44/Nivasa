@@ -8,6 +8,7 @@ import authRoutes from './routes/authRoutes.js';
 import societyRoutes from './routes/societyRoutes.js';
 import flatRoutes from './routes/flatRoutes.js';
 import complaintRoutes from './routes/complaintRoutes.js';
+import visitorRoutes from './routes/visitorRoutes.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -36,6 +37,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/societies', societyRoutes);
 app.use('/api/flats', flatRoutes);
 app.use('/api/complaints', complaintRoutes);
+app.use('/api/visitors', visitorRoutes);
 
 // Health Check
 app.get('/api/health', (req, res) => {

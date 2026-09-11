@@ -31,20 +31,28 @@ export async function classifyComplaint(text) {
 
   // 1. Try Groq Cloud API if key is available
   if (groqApiKey && groqApiKey.trim().length > 10) {
-    try {
-      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${groqApiKey.trim()}`,
-        },
-        body: JSON.stringify({
-          model: 'llama-3.3-70b-versatile',
-          temperature: 0.1,
-          messages: [
-            {
-              role: 'system',
-              content: `You are an AI assistant for a residential society management platform named Nivasa.
+    const candidateModels = [
+      process.env.GROQ_MODEL,
+      'openai/gpt-oss-20b',
+      'qwen/qwen3.8-27b',
+      'openai/gpt-oss-120b',
+    ].filter(Boolean);
+
+    for (const model of candidateModels) {
+      try {
+        const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${groqApiKey.trim()}`,
+          },
+          body: JSON.stringify({
+            model,
+            temperature: 0.1,
+            messages: [
+              {
+                role: 'system',
+                content: `You are an AI assistant for a residential society management platform named Nivasa.
 Your job is to analyze a resident maintenance complaint description and output ONLY a valid JSON object with:
 - "category": Must be one of ["Plumbing", "Electrical", "Carpentry", "Cleaning", "Civil & Painting", "Appliances", "Security", "General"]
 - "priority": Must be one of ["Low", "Medium", "High", "Emergency"] (Use Emergency for water flooding, sparking wires, fire hazards, or severe leaks)
@@ -60,36 +68,38 @@ Example output:
   "confidence": 0.96
 }
 Output strictly the JSON object, nothing else.`,
-            },
-            {
-              role: 'user',
-              content: text,
-            },
-          ],
-        }),
-      });
+              },
+              {
+                role: 'user',
+                content: text,
+              },
+            ],
+          }),
+        });
 
-      if (response.ok) {
-        const data = await response.json();
-        const rawContent = data.choices?.[0]?.message?.content;
-        if (rawContent) {
-          const cleaned = rawContent.replace(/```json/g, '').replace(/```/g, '').trim();
-          const parsed = JSON.parse(cleaned);
-
-          if (VALID_CATEGORIES.includes(parsed.category) && VALID_PRIORITIES.includes(parsed.priority)) {
-            return {
-              category: parsed.category,
-              priority: parsed.priority,
-              summary: parsed.summary || text.slice(0, 100),
-              source: 'groq-ai',
-              model: 'llama-3.3-70b-versatile',
-              confidence: parsed.confidence || 0.95,
-            };
+        if (response.ok) {
+          const data = await response.json();
+          const rawContent = data.choices?.[0]?.message?.content;
+          if (rawContent) {
+            const jsonMatch = rawContent.match(/\{[\s\S]*\}/);
+            if (jsonMatch) {
+              const parsed = JSON.parse(jsonMatch[0]);
+              if (VALID_CATEGORIES.includes(parsed.category) && VALID_PRIORITIES.includes(parsed.priority)) {
+                return {
+                  category: parsed.category,
+                  priority: parsed.priority,
+                  summary: parsed.summary || text.slice(0, 100),
+                  source: 'groq-ai',
+                  model,
+                  confidence: parsed.confidence || 0.95,
+                };
+              }
+            }
           }
         }
+      } catch (err) {
+        console.warn(`Groq API (${model}) failed: ${err.message}. Trying fallback...`);
       }
-    } catch (err) {
-      console.warn('Groq API classification skipped/failed. Falling back to smart heuristic:', err.message);
     }
   }
 

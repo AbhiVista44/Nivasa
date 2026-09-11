@@ -2,12 +2,18 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import mongoose from 'mongoose';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import authRoutes from './routes/authRoutes.js';
 import societyRoutes from './routes/societyRoutes.js';
 import flatRoutes from './routes/flatRoutes.js';
 import complaintRoutes from './routes/complaintRoutes.js';
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 dotenv.config();
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -38,19 +44,23 @@ app.get('/api/health', (req, res) => {
     platform: 'Nivasa Residential Platform API',
     timestamp: new Date().toISOString(),
     mongoConnected: mongoose.connection.readyState === 1,
+    database: mongoose.connection.name || 'in-memory',
   });
 });
 
 // Database Connection with graceful fallback
 const connectDB = async () => {
   const mongoURI = process.env.MONGODB_URI || 'mongodb://localhost:27017/nivasa';
+  const maskedURI = mongoURI.replace(/:([^:@]+)@/, ':****@');
   try {
     await mongoose.connect(mongoURI, {
-      serverSelectionTimeoutMS: 2000,
+      serverSelectionTimeoutMS: 10000,
+      dbName: process.env.DB_NAME || 'nivasa',
     });
-    console.log('✅ MongoDB connected successfully to:', mongoURI);
+    console.log(`✅ MongoDB Atlas connected successfully to database: "${mongoose.connection.name}" (${maskedURI})`);
   } catch (error) {
-    console.warn('⚠️  MongoDB connection skipped/failed. Running with in-memory resilient dataStore mode.');
+    console.warn('⚠️  MongoDB connection skipped/failed:', error.message);
+    console.warn('⚠️  Running with in-memory resilient dataStore mode.');
   }
 };
 

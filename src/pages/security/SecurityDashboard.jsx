@@ -21,6 +21,7 @@ import {
   VideoOff
 } from 'lucide-react';
 import { IntercomDirectoryModal } from '../../components/security/IntercomDirectoryModal';
+import { DeliveriesPanel } from '../../components/deliveries/DeliveriesPanel';
 
 export const SecurityDashboard = ({ activeTab = 'gate-console', onNavigate }) => {
   const { user, society } = useAuth();
@@ -213,6 +214,10 @@ export const SecurityDashboard = ({ activeTab = 'gate-console', onNavigate }) =>
       setTimeout(() => setWalkinFeedback(''), 4000);
     }
   };
+
+  if (activeTab === 'deliveries') {
+    return <DeliveriesPanel />;
+  }
 
   return (
     <div className="space-y-6">

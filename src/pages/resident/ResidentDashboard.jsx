@@ -12,6 +12,8 @@ import { ComplaintsPanel } from '../../components/complaints/ComplaintsPanel';
 import { ComplaintSubmitForm } from '../../components/complaints/ComplaintSubmitForm';
 import { ResidentVisitorsPanel } from '../../components/visitors/ResidentVisitorsPanel';
 import { ResidentApprovalsBanner } from '../../components/visitors/ResidentApprovalsBanner';
+import { DeliveriesPanel } from '../../components/deliveries/DeliveriesPanel';
+import { FacilityBookingHub } from '../../components/facilities/FacilityBookingHub';
 
 export const ResidentDashboard = ({ activeTab, onNavigate }) => {
   const { user, society } = useAuth();
@@ -39,6 +41,14 @@ export const ResidentDashboard = ({ activeTab, onNavigate }) => {
 
   if (activeTab === 'visitors') {
     return <ResidentVisitorsPanel />;
+  }
+
+  if (activeTab === 'deliveries') {
+    return <DeliveriesPanel />;
+  }
+
+  if (activeTab === 'facilities') {
+    return <FacilityBookingHub />;
   }
 
   const quickActions = [

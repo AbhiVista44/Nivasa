@@ -10,6 +10,8 @@ import flatRoutes from './routes/flatRoutes.js';
 import complaintRoutes from './routes/complaintRoutes.js';
 import visitorRoutes from './routes/visitorRoutes.js';
 import uploadRoutes from './routes/uploadRoutes.js';
+import deliveryRoutes from './routes/deliveryRoutes.js';
+import facilityRoutes from './routes/facilityRoutes.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -44,6 +46,8 @@ app.use('/api/flats', flatRoutes);
 app.use('/api/complaints', complaintRoutes);
 app.use('/api/visitors', visitorRoutes);
 app.use('/api/upload', uploadRoutes);
+app.use('/api/deliveries', deliveryRoutes);
+app.use('/api/facilities', facilityRoutes);
 
 // Health Check
 app.get('/api/health', (req, res) => {

@@ -13,8 +13,8 @@ class StorageService {
     this.keyId = process.env.B2_KEY_ID || process.env.B2_APPLICATION_KEY_ID || '';
     this.appKey = process.env.B2_APPLICATION_KEY || '';
     this.bucketName = process.env.B2_BUCKET_NAME || 'nivasa-media';
-    this.endpoint = process.env.B2_ENDPOINT || 'https://s3.us-west-004.backblazeb2.com';
-    this.region = process.env.B2_REGION || 'us-west-004';
+    this.endpoint = process.env.B2_ENDPOINT || 'https://s3.us-east-005.backblazeb2.com';
+    this.region = process.env.B2_REGION || 'us-east-005';
     this.cdnUrl = process.env.B2_CDN_URL || '';
 
     this.s3Client = null;

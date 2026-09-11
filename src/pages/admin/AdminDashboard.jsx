@@ -12,6 +12,8 @@ import {
 import { ResidentsFlatsDirectory } from '../../components/admin/ResidentsFlatsDirectory';
 import { AdminComplaintsPanel } from '../../components/complaints/AdminComplaintsPanel';
 import { AdminVisitorsView } from '../../components/admin/AdminVisitorsView';
+import { DeliveriesPanel } from '../../components/deliveries/DeliveriesPanel';
+import { FacilityBookingHub } from '../../components/facilities/FacilityBookingHub';
 
 export const AdminDashboard = ({ activeTab, onNavigate }) => {
   const { society } = useAuth();
@@ -26,6 +28,14 @@ export const AdminDashboard = ({ activeTab, onNavigate }) => {
 
   if (activeTab === 'gate') {
     return <AdminVisitorsView />;
+  }
+
+  if (activeTab === 'deliveries') {
+    return <DeliveriesPanel />;
+  }
+
+  if (activeTab === 'facilities') {
+    return <FacilityBookingHub />;
   }
 
   const stats = [

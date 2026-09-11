@@ -1,11 +1,13 @@
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
-import { initialSocieties, initialUsers, initialFlats, initialComplaints, initialVisitors } from '../data/seedData.js';
+import { initialSocieties, initialUsers, initialFlats, initialComplaints, initialVisitors, initialDeliveries, initialFacilities, initialFacilityBookings } from '../data/seedData.js';
 import { User } from '../models/User.js';
 import { Society } from '../models/Society.js';
 import { Flat } from '../models/Flat.js';
 import { Complaint } from '../models/Complaint.js';
 import { Visitor } from '../models/Visitor.js';
+import { Delivery } from '../models/Delivery.js';
+import { FacilityBooking } from '../models/FacilityBooking.js';
 import mongoose from 'mongoose';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'nivasa_super_secret_jwt_key_2026_resident_community';
@@ -20,6 +22,9 @@ class DataStore {
     this.flats = [...initialFlats];
     this.complaints = [...initialComplaints];
     this.visitors = [...initialVisitors];
+    this.deliveries = [...initialDeliveries];
+    this.facilities = [...initialFacilities];
+    this.facilityBookings = [...initialFacilityBookings];
     this.auditLogs = [];
     this.isSeeded = false;
   }
@@ -68,6 +73,22 @@ class DataStore {
         console.log('🌱 Auto-seeding initial gate visitors & passes into MongoDB...');
         for (const v of initialVisitors) {
           await Visitor.create(v);
+        }
+      }
+
+      const deliveryCount = await Delivery.countDocuments();
+      if (deliveryCount === 0) {
+        console.log('🌱 Auto-seeding initial gate deliveries & parcels into MongoDB...');
+        for (const d of initialDeliveries) {
+          await Delivery.create(d);
+        }
+      }
+
+      const bookingCount = await FacilityBooking.countDocuments();
+      if (bookingCount === 0) {
+        console.log('🌱 Auto-seeding initial facility bookings into MongoDB...');
+        for (const b of initialFacilityBookings) {
+          await FacilityBooking.create(b);
         }
       }
 
@@ -855,6 +876,322 @@ class DataStore {
     visitor.timeline.push(timelineEvent);
     visitor.updatedAt = new Date();
     return visitor;
+  }
+
+  // ==========================================
+  // MILESTONE 5: DELIVERIES MANAGEMENT
+  // ==========================================
+
+  async getDeliveries(societyId, filter = {}) {
+    await this.ensureSeeded();
+    if (this.isMongoConnected()) {
+      const query = { societyId };
+      if (filter.flatNumber) query.flatNumber = filter.flatNumber;
+      if (filter.status) query.status = filter.status;
+      if (filter.carrier) query.carrier = filter.carrier;
+      return await Delivery.find(query).sort({ arrivedAt: -1 });
+    }
+
+    return this.deliveries
+      .filter(d => {
+        if (d.societyId?.toString() !== societyId?.toString()) return false;
+        if (filter.flatNumber && d.flatNumber !== filter.flatNumber) return false;
+        if (filter.status && d.status !== filter.status) return false;
+        if (filter.carrier && d.carrier !== filter.carrier) return false;
+        return true;
+      })
+      .sort((a, b) => new Date(b.arrivedAt) - new Date(a.arrivedAt));
+  }
+
+  async getPendingDeliveriesCount(societyId, flatNumber) {
+    await this.ensureSeeded();
+    if (this.isMongoConnected()) {
+      const query = { societyId, status: 'Waiting at Gate' };
+      if (flatNumber) query.flatNumber = flatNumber;
+      return await Delivery.countDocuments(query);
+    }
+
+    return this.deliveries.filter(d => {
+      if (d.societyId?.toString() !== societyId?.toString()) return false;
+      if (d.status !== 'Waiting at Gate') return false;
+      if (flatNumber && d.flatNumber !== flatNumber) return false;
+      return true;
+    }).length;
+  }
+
+  async logDelivery(data, guard) {
+    await this.ensureSeeded();
+    const deliveryNumber = `DEL-${Math.floor(1000 + Math.random() * 9000)}`;
+    const pickupOtp = Math.floor(1000 + Math.random() * 9000).toString();
+
+    const deliveryPayload = {
+      societyId: data.societyId,
+      deliveryNumber,
+      flatNumber: data.flatNumber,
+      wing: data.wing || 'Wing B',
+      residentName: data.residentName || '',
+      carrier: data.carrier || 'Amazon',
+      packageCount: Number(data.packageCount) || 1,
+      trackingNumber: data.trackingNumber || '',
+      photoUrl: data.photoUrl || '',
+      status: 'Waiting at Gate',
+      arrivalGate: data.arrivalGate || 'Main Gate 1',
+      securityGuardName: guard?.name || 'Gate Security',
+      arrivedAt: new Date(),
+      pickupOtp,
+      notes: data.notes || '',
+    };
+
+    if (this.isMongoConnected()) {
+      const delivery = await Delivery.create(deliveryPayload);
+      return delivery.toObject ? delivery.toObject() : delivery;
+    }
+
+    const inMemDelivery = {
+      _id: new mongoose.Types.ObjectId().toString(),
+      ...deliveryPayload,
+    };
+    this.deliveries.unshift(inMemDelivery);
+    return inMemDelivery;
+  }
+
+  async confirmDeliveryPickup(id, otp, actor) {
+    await this.ensureSeeded();
+    if (this.isMongoConnected()) {
+      const delivery = mongoose.isValidObjectId(id)
+        ? await Delivery.findById(id)
+        : await Delivery.findOne({ deliveryNumber: id });
+      if (!delivery) return null;
+      if (otp && delivery.pickupOtp && delivery.pickupOtp.trim() !== otp.trim()) {
+        const err = new Error('Invalid 4-digit pickup verification code.');
+        err.code = 'INVALID_OTP';
+        throw err;
+      }
+      delivery.status = 'Picked Up';
+      delivery.pickedUpAt = new Date();
+      delivery.pickedUpBy = actor?.name || 'Resident';
+      await delivery.save();
+      return delivery.toObject ? delivery.toObject() : delivery;
+    }
+
+    const delivery = this.deliveries.find(d => d._id?.toString() === id?.toString() || d.deliveryNumber === id);
+    if (!delivery) return null;
+    if (otp && delivery.pickupOtp && delivery.pickupOtp.trim() !== otp.trim()) {
+      const err = new Error('Invalid 4-digit pickup verification code.');
+      err.code = 'INVALID_OTP';
+      throw err;
+    }
+    delivery.status = 'Picked Up';
+    delivery.pickedUpAt = new Date();
+    delivery.pickedUpBy = actor?.name || 'Resident';
+    return delivery;
+  }
+
+  // ==========================================
+  // MILESTONE 5: FACILITY BOOKINGS & ENGINE
+  // ==========================================
+
+  getFacilityList() {
+    return this.facilities;
+  }
+
+  async getFacilityBookings(societyId, filter = {}) {
+    await this.ensureSeeded();
+    if (this.isMongoConnected()) {
+      const query = { societyId };
+      if (filter.facilityId) query.facilityId = filter.facilityId;
+      if (filter.flatNumber) query.flatNumber = filter.flatNumber;
+      if (filter.date) query.date = filter.date;
+      if (filter.status) query.status = filter.status;
+      return await FacilityBooking.find(query).sort({ date: 1, startTime: 1 });
+    }
+
+    return this.facilityBookings
+      .filter(b => {
+        if (b.societyId?.toString() !== societyId?.toString()) return false;
+        if (filter.facilityId && b.facilityId !== filter.facilityId) return false;
+        if (filter.flatNumber && b.flatNumber !== filter.flatNumber) return false;
+        if (filter.date && b.date !== filter.date) return false;
+        if (filter.status && b.status !== filter.status) return false;
+        return true;
+      })
+      .sort((a, b) => (a.date + a.startTime).localeCompare(b.date + b.startTime));
+  }
+
+  async checkFacilityAvailability(societyId, facilityId, date) {
+    await this.ensureSeeded();
+    if (this.isMongoConnected()) {
+      return await FacilityBooking.find({
+        societyId,
+        facilityId,
+        date,
+        status: 'Booked',
+      }).select('startTime endTime bookingNumber residentName flatNumber');
+    }
+
+    return this.facilityBookings
+      .filter(b =>
+        b.societyId?.toString() === societyId?.toString() &&
+        b.facilityId === facilityId &&
+        b.date === date &&
+        b.status === 'Booked'
+      )
+      .map(b => ({
+        startTime: b.startTime,
+        endTime: b.endTime,
+        bookingNumber: b.bookingNumber,
+        residentName: b.residentName,
+        flatNumber: b.flatNumber,
+      }));
+  }
+
+  async createFacilityBooking(data, resident) {
+    await this.ensureSeeded();
+    const { societyId, facilityId, facilityName, date, startTime, endTime, purpose, guestCount } = data;
+    const flatNumber = resident?.flatNumber || data.flatNumber;
+    const residentName = resident?.name || data.residentName || 'Resident';
+    const wing = resident?.wing || data.wing || '';
+    const residentId = resident?._id || resident?.id || null;
+
+    if (!societyId || !facilityId || !date || !startTime || !endTime || !flatNumber) {
+      const err = new Error('Missing required booking parameters (facility, date, time slot, flat).');
+      err.code = 'VALIDATION_ERROR';
+      throw err;
+    }
+
+    const todayStr = new Date().toISOString().split('T')[0];
+
+    if (this.isMongoConnected()) {
+      // 1. Strict zero-overlap atomic conflict check
+      const conflict = await FacilityBooking.findOne({
+        societyId,
+        facilityId,
+        date,
+        status: 'Booked',
+        $and: [
+          { startTime: { $lt: endTime } },
+          { endTime: { $gt: startTime } },
+        ],
+      });
+
+      if (conflict) {
+        const err = new Error(`Time slot conflict: ${facilityName || 'Facility'} is already reserved from ${conflict.startTime} to ${conflict.endTime} on ${date}.`);
+        err.code = 'SLOT_CONFLICT';
+        throw err;
+      }
+
+      // 2. Check flat quota (max 2 active future/current bookings)
+      const activeBookingsCount = await FacilityBooking.countDocuments({
+        societyId,
+        flatNumber,
+        status: 'Booked',
+        date: { $gte: todayStr },
+      });
+
+      if (activeBookingsCount >= 2) {
+        const err = new Error('Flat booking quota exceeded. Each residence is limited to a maximum of 2 active facility reservations to ensure fair community access.');
+        err.code = 'QUOTA_EXCEEDED';
+        throw err;
+      }
+
+      // 3. Create booking
+      const bookingNumber = `BKG-${Math.floor(1000 + Math.random() * 9000)}`;
+      const newBooking = await FacilityBooking.create({
+        societyId,
+        bookingNumber,
+        facilityId,
+        facilityName: facilityName || facilityId,
+        residentId,
+        residentName,
+        flatNumber,
+        wing,
+        date,
+        startTime,
+        endTime,
+        purpose: purpose || 'Recreation & Fitness',
+        guestCount: Number(guestCount) || 1,
+        status: 'Booked',
+        bookedAt: new Date(),
+      });
+
+      return newBooking.toObject ? newBooking.toObject() : newBooking;
+    }
+
+    // In-Memory Fallback
+    const conflict = this.facilityBookings.find(b =>
+      b.societyId?.toString() === societyId?.toString() &&
+      b.facilityId === facilityId &&
+      b.date === date &&
+      b.status === 'Booked' &&
+      b.startTime < endTime &&
+      b.endTime > startTime
+    );
+
+    if (conflict) {
+      const err = new Error(`Time slot conflict: ${facilityName || 'Facility'} is already reserved from ${conflict.startTime} to ${conflict.endTime} on ${date}.`);
+      err.code = 'SLOT_CONFLICT';
+      throw err;
+    }
+
+    const activeBookingsCount = this.facilityBookings.filter(b =>
+      b.societyId?.toString() === societyId?.toString() &&
+      b.flatNumber === flatNumber &&
+      b.status === 'Booked' &&
+      b.date >= todayStr
+    ).length;
+
+    if (activeBookingsCount >= 2) {
+      const err = new Error('Flat booking quota exceeded. Each residence is limited to a maximum of 2 active facility reservations to ensure fair community access.');
+      err.code = 'QUOTA_EXCEEDED';
+      throw err;
+    }
+
+    const bookingNumber = `BKG-${Math.floor(1000 + Math.random() * 9000)}`;
+    const newBooking = {
+      _id: new mongoose.Types.ObjectId().toString(),
+      societyId,
+      bookingNumber,
+      facilityId,
+      facilityName: facilityName || facilityId,
+      residentId,
+      residentName,
+      flatNumber,
+      wing,
+      date,
+      startTime,
+      endTime,
+      purpose: purpose || 'Recreation & Fitness',
+      guestCount: Number(guestCount) || 1,
+      status: 'Booked',
+      bookedAt: new Date(),
+    };
+
+    this.facilityBookings.unshift(newBooking);
+    return newBooking;
+  }
+
+  async cancelFacilityBooking(id, reason, actor) {
+    await this.ensureSeeded();
+    if (this.isMongoConnected()) {
+      const booking = mongoose.isValidObjectId(id)
+        ? await FacilityBooking.findById(id)
+        : await FacilityBooking.findOne({ bookingNumber: id });
+      if (!booking) return null;
+      booking.status = 'Cancelled';
+      booking.cancelledAt = new Date();
+      booking.cancelledBy = actor?.name || 'Resident';
+      booking.cancellationReason = reason || 'Cancelled by resident';
+      await booking.save();
+      return booking.toObject ? booking.toObject() : booking;
+    }
+
+    const booking = this.facilityBookings.find(b => b._id?.toString() === id?.toString() || b.bookingNumber === id);
+    if (!booking) return null;
+    booking.status = 'Cancelled';
+    booking.cancelledAt = new Date();
+    booking.cancelledBy = actor?.name || 'Resident';
+    booking.cancellationReason = reason || 'Cancelled by resident';
+    return booking;
   }
 }
 

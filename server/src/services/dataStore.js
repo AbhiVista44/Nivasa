@@ -906,14 +906,14 @@ class DataStore {
   async getPendingDeliveriesCount(societyId, flatNumber) {
     await this.ensureSeeded();
     if (this.isMongoConnected()) {
-      const query = { societyId, status: 'Waiting at Gate' };
+      const query = { societyId, status: { $in: ['Waiting at Gate', 'Waiting for Courier OTP'] } };
       if (flatNumber) query.flatNumber = flatNumber;
       return await Delivery.countDocuments(query);
     }
 
     return this.deliveries.filter(d => {
       if (d.societyId?.toString() !== societyId?.toString()) return false;
-      if (d.status !== 'Waiting at Gate') return false;
+      if (!['Waiting at Gate', 'Waiting for Courier OTP'].includes(d.status)) return false;
       if (flatNumber && d.flatNumber !== flatNumber) return false;
       return true;
     }).length;
@@ -923,6 +923,8 @@ class DataStore {
     await this.ensureSeeded();
     const deliveryNumber = `DEL-${Math.floor(1000 + Math.random() * 9000)}`;
     const pickupOtp = Math.floor(1000 + Math.random() * 9000).toString();
+    const requiresCourierOtp = data.requiresCourierOtp !== undefined ? Boolean(data.requiresCourierOtp) : true;
+    const initialStatus = requiresCourierOtp ? 'Waiting for Courier OTP' : 'Waiting at Gate';
 
     const deliveryPayload = {
       societyId: data.societyId,
@@ -934,7 +936,11 @@ class DataStore {
       packageCount: Number(data.packageCount) || 1,
       trackingNumber: data.trackingNumber || '',
       photoUrl: data.photoUrl || '',
-      status: 'Waiting at Gate',
+      status: data.status || initialStatus,
+      requiresCourierOtp,
+      courierDeliveryOtp: '',
+      otpSharedWithCourier: false,
+      otpSharedAt: null,
       arrivalGate: data.arrivalGate || 'Main Gate 1',
       securityGuardName: guard?.name || 'Gate Security',
       arrivedAt: new Date(),
@@ -955,6 +961,68 @@ class DataStore {
     return inMemDelivery;
   }
 
+  async shareCourierDeliveryOtp(id, otp, residentUser) {
+    await this.ensureSeeded();
+    if (!otp || typeof otp !== 'string' || !otp.trim()) {
+      const err = new Error('Courier delivery OTP cannot be empty.');
+      err.code = 'INVALID_OTP';
+      throw err;
+    }
+
+    const trimmedOtp = otp.trim();
+
+    if (this.isMongoConnected()) {
+      const delivery = mongoose.isValidObjectId(id)
+        ? await Delivery.findById(id)
+        : await Delivery.findOne({ deliveryNumber: id });
+      if (!delivery) return null;
+
+      if (residentUser?.role === 'resident' && residentUser.flatNumber && delivery.flatNumber !== residentUser.flatNumber) {
+        const err = new Error('Unauthorized to provide OTP for another flat.');
+        err.code = 'UNAUTHORIZED';
+        throw err;
+      }
+
+      delivery.courierDeliveryOtp = trimmedOtp;
+      await delivery.save();
+      return delivery.toObject ? delivery.toObject() : delivery;
+    }
+
+    const delivery = this.deliveries.find(d => d._id?.toString() === id?.toString() || d.deliveryNumber === id);
+    if (!delivery) return null;
+    if (residentUser?.role === 'resident' && residentUser.flatNumber && delivery.flatNumber !== residentUser.flatNumber) {
+      const err = new Error('Unauthorized to provide OTP for another flat.');
+      err.code = 'UNAUTHORIZED';
+      throw err;
+    }
+
+    delivery.courierDeliveryOtp = trimmedOtp;
+    return delivery;
+  }
+
+  async markCourierOtpShared(id, securityUser) {
+    await this.ensureSeeded();
+    if (this.isMongoConnected()) {
+      const delivery = mongoose.isValidObjectId(id)
+        ? await Delivery.findById(id)
+        : await Delivery.findOne({ deliveryNumber: id });
+      if (!delivery) return null;
+
+      delivery.otpSharedWithCourier = true;
+      delivery.otpSharedAt = new Date();
+      delivery.status = 'Waiting at Gate';
+      await delivery.save();
+      return delivery.toObject ? delivery.toObject() : delivery;
+    }
+
+    const delivery = this.deliveries.find(d => d._id?.toString() === id?.toString() || d.deliveryNumber === id);
+    if (!delivery) return null;
+    delivery.otpSharedWithCourier = true;
+    delivery.otpSharedAt = new Date();
+    delivery.status = 'Waiting at Gate';
+    return delivery;
+  }
+
   async confirmDeliveryPickup(id, otp, actor) {
     await this.ensureSeeded();
     if (this.isMongoConnected()) {
@@ -969,7 +1037,7 @@ class DataStore {
       }
       delivery.status = 'Picked Up';
       delivery.pickedUpAt = new Date();
-      delivery.pickedUpBy = actor?.name || 'Resident';
+      delivery.pickedUpBy = actor?.name || (actor?.role === 'resident' ? `${actor?.name || 'Resident'} (Flat ${actor?.flatNumber})` : 'Resident');
       await delivery.save();
       return delivery.toObject ? delivery.toObject() : delivery;
     }
@@ -983,7 +1051,7 @@ class DataStore {
     }
     delivery.status = 'Picked Up';
     delivery.pickedUpAt = new Date();
-    delivery.pickedUpBy = actor?.name || 'Resident';
+    delivery.pickedUpBy = actor?.name || (actor?.role === 'resident' ? `${actor?.name || 'Resident'} (Flat ${actor?.flatNumber})` : 'Resident');
     return delivery;
   }
 

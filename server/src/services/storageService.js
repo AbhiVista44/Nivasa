@@ -1,3 +1,4 @@
+import '../loadEnv.js';
 import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import fs from 'node:fs';
@@ -10,6 +11,11 @@ const UPLOADS_DIR = path.resolve(__dirname, '../../public/uploads');
 
 class StorageService {
   constructor() {
+    this.s3Client = null;
+    this.initClient();
+  }
+
+  initClient() {
     this.keyId = process.env.B2_KEY_ID || process.env.B2_APPLICATION_KEY_ID || '';
     this.appKey = process.env.B2_APPLICATION_KEY || '';
     this.bucketName = process.env.B2_BUCKET_NAME || 'nivasa-media';
@@ -17,11 +23,6 @@ class StorageService {
     this.region = process.env.B2_REGION || 'us-east-005';
     this.cdnUrl = process.env.B2_CDN_URL || '';
 
-    this.s3Client = null;
-    this.initClient();
-  }
-
-  initClient() {
     if (this.keyId && this.appKey) {
       try {
         this.s3Client = new S3Client({
@@ -43,6 +44,9 @@ class StorageService {
   }
 
   isB2Enabled() {
+    if (!this.s3Client && (process.env.B2_KEY_ID || process.env.B2_APPLICATION_KEY_ID)) {
+      this.initClient();
+    }
     return Boolean(this.s3Client && this.keyId && this.appKey);
   }
 

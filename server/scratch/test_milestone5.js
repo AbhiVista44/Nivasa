@@ -93,7 +93,37 @@ async function runTests() {
   });
   console.log(`📦 Resident Deliveries count: ${residentDeliveries.data.count}`);
 
-  // 5. Test Resident Confirming Pickup with OTP
+  // 4b. Test Resident sharing Amazon courier OTP with Security
+  const shareOtpRes = await makeRequest({
+    hostname: 'localhost',
+    port: 5000,
+    path: `/api/deliveries/${loggedDelivery._id}/share-courier-otp`,
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${residentToken}`,
+      'x-society-id': societyId,
+    },
+  }, { otp: '8492' });
+  console.log('📲 Resident shared Courier OTP:', shareOtpRes.status, shareOtpRes.data.message);
+  if (shareOtpRes.status !== 200) throw new Error('Share courier OTP failed');
+
+  // 4c. Test Security marking OTP as shared with courier
+  const otpSharedRes = await makeRequest({
+    hostname: 'localhost',
+    port: 5000,
+    path: `/api/deliveries/${loggedDelivery._id}/otp-shared`,
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${securityToken}`,
+      'x-society-id': societyId,
+    },
+  });
+  console.log('👮 Security marked OTP shared with courier:', otpSharedRes.status, otpSharedRes.data.message);
+  if (otpSharedRes.status !== 200) throw new Error('Mark OTP shared failed');
+
+  // 5. Test Resident Confirming Pickup / Collection
   const pickupRes = await makeRequest({
     hostname: 'localhost',
     port: 5000,

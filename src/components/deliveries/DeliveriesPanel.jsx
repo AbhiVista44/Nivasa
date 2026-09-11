@@ -5,18 +5,20 @@ import {
   Package,
   PackageCheck,
   PackageX,
-  Camera,
   RefreshCw,
   Clock,
   MapPin,
   Loader2,
   CheckCircle2,
   AlertTriangle,
-  ChevronDown,
   ShieldCheck,
   Plus,
   Search,
   X,
+  Key,
+  Share2,
+  Edit2,
+  ShieldAlert,
 } from 'lucide-react';
 
 const CARRIERS = ['Amazon', 'Flipkart', 'Swiggy', 'Zomato', 'Blinkit', 'Zepto', 'BlueDart', 'DTDC', 'India Post', 'Other'];
@@ -46,11 +48,34 @@ function timeAgo(date) {
 // ————————————————————————————
 // Resident Sub-component
 // ————————————————————————————
-function ResidentDeliveriesView({ deliveries, loading, onRefresh, onPickup, confirmingId }) {
-  const waiting = deliveries.filter(d => d.status === 'Waiting at Gate');
+function ResidentDeliveriesView({
+  deliveries,
+  loading,
+  onRefresh,
+  onPickup,
+  onShareCourierOtp,
+  confirmingId,
+}) {
+  const waiting = deliveries.filter(d => d.status === 'Waiting at Gate' || d.status === 'Waiting for Courier OTP');
   const picked = deliveries.filter(d => d.status === 'Picked Up');
-  const [otpMap, setOtpMap] = useState({});
+  const pendingOtpCount = waiting.filter(d => d.requiresCourierOtp && !d.courierDeliveryOtp).length;
+
+  const [otpInputs, setOtpInputs] = useState({});
+  const [editingOtp, setEditingOtp] = useState({});
+  const [sharingId, setSharingId] = useState(null);
   const [activeTab, setActiveTab] = useState('waiting');
+
+  const handleShareOtp = async (deliveryId) => {
+    const val = (otpInputs[deliveryId] || '').trim();
+    if (!val) return;
+    setSharingId(deliveryId);
+    try {
+      await onShareCourierOtp(deliveryId, val);
+      setEditingOtp(prev => ({ ...prev, [deliveryId]: false }));
+    } finally {
+      setSharingId(null);
+    }
+  };
 
   return (
     <div className="space-y-5">
@@ -64,16 +89,27 @@ function ResidentDeliveriesView({ deliveries, loading, onRefresh, onPickup, conf
                 <Package className="w-7 h-7 text-amber-300" />
               </div>
               <div>
-                <p className="text-xs font-bold uppercase tracking-wider text-amber-300">Gate Parcel Alert</p>
+                <div className="flex items-center gap-2">
+                  <p className="text-xs font-bold uppercase tracking-wider text-amber-300">Gate Parcel Alert</p>
+                  {pendingOtpCount > 0 && (
+                    <span className="text-[10px] font-bold px-2 py-0.5 bg-amber-400/20 text-amber-300 border border-amber-400/40 rounded-full animate-pulse">
+                      {pendingOtpCount} Needs Delivery PIN
+                    </span>
+                  )}
+                </div>
                 <h2 className="text-xl font-bold mt-0.5">
                   {waiting.length} {waiting.length === 1 ? 'Package' : 'Packages'} at Gate
                 </h2>
-                <p className="text-teal-200 text-sm">Collect from {waiting[0]?.arrivalGate || 'Main Gate 1'}</p>
+                <p className="text-teal-200 text-sm">
+                  {pendingOtpCount > 0
+                    ? 'Please share your courier PIN with security so delivery can be completed.'
+                    : `Collect safely from ${waiting[0]?.arrivalGate || 'Main Gate 1'}.`}
+                </p>
               </div>
             </div>
             <button
               onClick={onRefresh}
-              className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl text-sm font-medium transition-all"
+              className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl text-sm font-medium transition-all self-start sm:self-center"
             >
               <RefreshCw className="w-4 h-4" />
               Refresh
@@ -85,7 +121,7 @@ function ResidentDeliveriesView({ deliveries, loading, onRefresh, onPickup, conf
       {/* Tabs */}
       <div className="flex border-b border-slate-200">
         {[
-          { key: 'waiting', label: `Waiting (${waiting.length})`, icon: Package },
+          { key: 'waiting', label: `Active (${waiting.length})`, icon: Package },
           { key: 'history', label: `Collected (${picked.length})`, icon: PackageCheck },
         ].map(tab => (
           <button
@@ -108,20 +144,26 @@ function ResidentDeliveriesView({ deliveries, loading, onRefresh, onPickup, conf
           <Loader2 className="w-8 h-8 animate-spin text-teal-600" />
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-4">
           {activeTab === 'waiting' && (
             waiting.length === 0 ? (
-              <div className="text-center py-16 text-slate-500">
+              <div className="text-center py-16 text-slate-500 bg-slate-50 rounded-2xl border border-slate-200">
                 <PackageCheck className="w-12 h-12 mx-auto mb-3 text-slate-300" />
                 <p className="font-semibold text-slate-600">All clear! No packages waiting.</p>
-                <p className="text-sm text-slate-400 mt-1">We'll alert you when a parcel arrives.</p>
+                <p className="text-sm text-slate-400 mt-1">We'll alert you as soon as a delivery parcel arrives at the gate.</p>
               </div>
             ) : (
               waiting.map(d => {
                 const colors = CARRIER_COLORS[d.carrier] || CARRIER_COLORS.Other;
+                const isEditing = editingOtp[d._id] || (!d.courierDeliveryOtp && d.requiresCourierOtp);
+
                 return (
-                  <div key={d._id} className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm hover:shadow-md transition-shadow">
-                    <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                  <div
+                    key={d._id}
+                    className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm hover:shadow-md transition-shadow space-y-4"
+                  >
+                    {/* Top Row: Carrier, Package Info & Status Pill */}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                       <div className="flex items-start gap-4">
                         <div className={`w-12 h-12 rounded-xl ${colors.bg} border ${colors.border} flex items-center justify-center flex-shrink-0`}>
                           <Package className={`w-6 h-6 ${colors.text}`} />
@@ -136,9 +178,9 @@ function ResidentDeliveriesView({ deliveries, loading, onRefresh, onPickup, conf
                           <p className="font-semibold text-slate-800 mt-1">
                             {d.packageCount} {d.packageCount === 1 ? 'package' : 'packages'}
                           </p>
-                          <div className="flex items-center gap-3 text-xs text-slate-500 mt-1.5">
-                            <span className="flex items-center gap-1"><MapPin className="w-3 h-3" />{d.arrivalGate || 'Main Gate 1'}</span>
-                            <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{timeAgo(d.arrivedAt)}</span>
+                          <div className="flex items-center gap-3 text-xs text-slate-500 mt-1">
+                            <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5" />{d.arrivalGate || 'Main Gate 1'}</span>
+                            <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" />{timeAgo(d.arrivedAt)}</span>
                           </div>
                           {d.trackingNumber && (
                             <p className="text-xs text-slate-400 mt-1 font-mono">Track: {d.trackingNumber}</p>
@@ -146,37 +188,129 @@ function ResidentDeliveriesView({ deliveries, loading, onRefresh, onPickup, conf
                         </div>
                       </div>
 
-                      <div className="flex flex-col items-end gap-3 min-w-0 sm:min-w-[200px]">
-                        <div className="w-full bg-teal-50 border border-teal-200 rounded-xl p-3 text-center">
-                          <p className="text-xs text-teal-600 font-medium">Pickup Verification PIN</p>
-                          <p className="text-3xl font-mono font-bold text-teal-800 tracking-[0.2em] mt-1">{d.pickupOtp}</p>
-                          <p className="text-xs text-teal-500 mt-1">Show this to gate security</p>
-                        </div>
-                        <div className="flex gap-2 w-full">
-                          <input
-                            type="number"
-                            maxLength={4}
-                            placeholder="Enter 4-digit OTP"
-                            value={otpMap[d._id] || ''}
-                            onChange={e => setOtpMap(prev => ({ ...prev, [d._id]: e.target.value }))}
-                            className="flex-1 px-3 py-2 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 font-mono"
-                          />
-                          <button
-                            onClick={() => onPickup(d._id, otpMap[d._id] || '')}
-                            disabled={confirmingId === d._id}
-                            className="px-4 py-2 bg-teal-700 hover:bg-teal-600 text-white text-sm font-semibold rounded-xl transition-all disabled:opacity-50 flex items-center gap-1.5 whitespace-nowrap"
-                          >
-                            {confirmingId === d._id ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
-                            Confirm
-                          </button>
-                        </div>
+                      {/* Status Tag */}
+                      <div className="self-start sm:self-auto">
+                        {d.status === 'Waiting for Courier OTP' || (!d.otpSharedWithCourier && d.requiresCourierOtp) ? (
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200">
+                            <Key className="w-3.5 h-3.5 text-amber-600 animate-pulse" />
+                            Courier Awaiting PIN at Gate
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-teal-50 text-teal-800 border border-teal-200">
+                            <PackageCheck className="w-3.5 h-3.5 text-teal-600" />
+                            Stored at Gate Rack
+                          </span>
+                        )}
                       </div>
                     </div>
-                    {d.notes && (
-                      <p className="mt-3 text-xs text-slate-500 bg-slate-50 rounded-lg px-3 py-2 border border-slate-100">
-                        📝 {d.notes}
-                      </p>
+
+                    {/* Middle: Real-world Courier Delivery OTP Section */}
+                    {d.requiresCourierOtp && (
+                      <div className="bg-gradient-to-br from-amber-50/70 to-orange-50/50 border border-amber-200 rounded-xl p-4">
+                        {isEditing ? (
+                          <div className="space-y-3">
+                            <div className="flex items-center justify-between">
+                              <label className="text-xs font-bold text-amber-900 flex items-center gap-1.5">
+                                <Key className="w-4 h-4 text-amber-600" />
+                                {d.carrier} Delivery OTP / PIN
+                              </label>
+                              {d.courierDeliveryOtp && (
+                                <button
+                                  type="button"
+                                  onClick={() => setEditingOtp(prev => ({ ...prev, [d._id]: false }))}
+                                  className="text-xs text-slate-500 hover:text-slate-700 underline"
+                                >
+                                  Cancel
+                                </button>
+                              )}
+                            </div>
+                            <p className="text-xs text-amber-700">
+                              {d.carrier} sent a delivery PIN to your phone SMS or app. Enter it below so Gate Security can share it with the delivery person.
+                            </p>
+                            <div className="flex flex-col sm:flex-row gap-2">
+                              <input
+                                type="text"
+                                maxLength={8}
+                                placeholder="Enter 4-6 digit OTP"
+                                value={otpInputs[d._id] ?? (d.courierDeliveryOtp || '')}
+                                onChange={e => setOtpInputs(prev => ({ ...prev, [d._id]: e.target.value }))}
+                                className="flex-1 px-4 py-2.5 bg-white border border-amber-300 rounded-xl text-base font-mono font-bold tracking-widest text-slate-800 placeholder:font-normal placeholder:tracking-normal focus:outline-none focus:ring-2 focus:ring-amber-500"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => handleShareOtp(d._id)}
+                                disabled={sharingId === d._id || !(otpInputs[d._id] ?? d.courierDeliveryOtp)?.trim()}
+                                className="px-5 py-2.5 bg-amber-600 hover:bg-amber-700 text-white text-sm font-bold rounded-xl transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-sm"
+                              >
+                                {sharingId === d._id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Share2 className="w-4 h-4" />}
+                                Share PIN with Security
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 rounded-xl bg-amber-100 border border-amber-300 flex items-center justify-center flex-shrink-0">
+                                <Key className="w-5 h-5 text-amber-700" />
+                              </div>
+                              <div>
+                                <p className="text-xs font-medium text-amber-800">Shared {d.carrier} Delivery PIN</p>
+                                <p className="text-2xl font-mono font-black text-amber-950 tracking-[0.2em]">
+                                  {d.courierDeliveryOtp}
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-3">
+                              {d.otpSharedWithCourier ? (
+                                <span className="text-xs font-semibold text-emerald-700 bg-emerald-100/70 border border-emerald-300 px-3 py-1.5 rounded-lg flex items-center gap-1.5">
+                                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                                  Guard shared PIN with courier
+                                </span>
+                              ) : (
+                                <span className="text-xs font-semibold text-amber-800 bg-amber-100/80 border border-amber-300 px-3 py-1.5 rounded-lg flex items-center gap-1.5">
+                                  <Clock className="w-4 h-4 text-amber-600 animate-pulse" />
+                                  Guard is sharing PIN with courier...
+                                </span>
+                              )}
+
+                              <button
+                                type="button"
+                                onClick={() => setEditingOtp(prev => ({ ...prev, [d._id]: true }))}
+                                className="p-2 text-slate-500 hover:text-slate-700 hover:bg-white rounded-lg transition-all"
+                                title="Update PIN"
+                              >
+                                <Edit2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     )}
+
+                    {/* Bottom Action: Physical Collection / Pickup Confirmation */}
+                    <div className="pt-2 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div className="text-xs text-slate-500">
+                        {d.notes && <span className="block mb-1 text-slate-600 font-medium">📝 {d.notes}</span>}
+                        {d.pickupOtp && (
+                          <span>Society Pickup Code: <strong className="font-mono text-slate-700">{d.pickupOtp}</strong></span>
+                        )}
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => onPickup(d._id)}
+                        disabled={confirmingId === d._id}
+                        className="px-5 py-2.5 bg-teal-700 hover:bg-teal-600 text-white text-sm font-semibold rounded-xl transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-sm self-stretch sm:self-auto"
+                      >
+                        {confirmingId === d._id ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <CheckCircle2 className="w-4 h-4" />
+                        )}
+                        Mark as Collected
+                      </button>
+                    </div>
                   </div>
                 );
               })
@@ -185,7 +319,7 @@ function ResidentDeliveriesView({ deliveries, loading, onRefresh, onPickup, conf
 
           {activeTab === 'history' && (
             picked.length === 0 ? (
-              <div className="text-center py-16 text-slate-500">
+              <div className="text-center py-16 text-slate-500 bg-slate-50 rounded-2xl border border-slate-200">
                 <PackageX className="w-12 h-12 mx-auto mb-3 text-slate-300" />
                 <p className="font-semibold">No collected packages yet.</p>
               </div>
@@ -204,6 +338,7 @@ function ResidentDeliveriesView({ deliveries, loading, onRefresh, onPickup, conf
                       </div>
                       <p className="text-xs text-slate-500 mt-0.5">
                         {d.packageCount} pkg{d.packageCount > 1 ? 's' : ''} • Arrived {timeAgo(d.arrivedAt)} • Collected {timeAgo(d.pickedUpAt)}
+                        {d.pickedUpBy && ` by ${d.pickedUpBy}`}
                       </p>
                     </div>
                     <span className="text-xs font-semibold px-2.5 py-1 bg-emerald-100 text-emerald-700 rounded-full border border-emerald-200">
@@ -223,7 +358,15 @@ function ResidentDeliveriesView({ deliveries, loading, onRefresh, onPickup, conf
 // ————————————————————————————
 // Security/Admin Sub-component
 // ————————————————————————————
-function SecurityDeliveriesView({ deliveries, loading, onRefresh, onLogDelivery, onPickup, confirmingId }) {
+function SecurityDeliveriesView({
+  deliveries,
+  loading,
+  onRefresh,
+  onLogDelivery,
+  onPickup,
+  onMarkOtpShared,
+  confirmingId,
+}) {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({
     flatNumber: '',
@@ -233,32 +376,62 @@ function SecurityDeliveriesView({ deliveries, loading, onRefresh, onLogDelivery,
     trackingNumber: '',
     notes: '',
     arrivalGate: 'Main Gate 1',
+    requiresCourierOtp: true,
   });
   const [submitting, setSubmitting] = useState(false);
+  const [sharingOtpId, setSharingOtpId] = useState(null);
   const [feedback, setFeedback] = useState('');
   const [search, setSearch] = useState('');
 
-  const waiting = deliveries.filter(d => d.status === 'Waiting at Gate');
-  const filtered = waiting.filter(d =>
-    !search || d.flatNumber.toLowerCase().includes(search.toLowerCase()) ||
-    d.carrier.toLowerCase().includes(search.toLowerCase()) ||
-    d.deliveryNumber.toLowerCase().includes(search.toLowerCase())
-  );
+  const waiting = deliveries.filter(d => d.status === 'Waiting at Gate' || d.status === 'Waiting for Courier OTP');
+  const needsOtp = waiting.filter(d => d.requiresCourierOtp && !d.otpSharedWithCourier);
+
+  const filtered = waiting.filter(d => {
+    if (!search.trim()) return true;
+    const q = search.toLowerCase();
+    return (
+      d.flatNumber?.toLowerCase().includes(q) ||
+      d.carrier?.toLowerCase().includes(q) ||
+      d.deliveryNumber?.toLowerCase().includes(q) ||
+      d.residentName?.toLowerCase().includes(q)
+    );
+  });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.flatNumber.trim()) { setFeedback('Flat number is required.'); return; }
+    if (!form.flatNumber.trim()) {
+      setFeedback('Flat number is required.');
+      return;
+    }
     setSubmitting(true);
     setFeedback('');
     try {
       await onLogDelivery(form);
-      setForm({ flatNumber: '', residentName: '', carrier: 'Amazon', packageCount: 1, trackingNumber: '', notes: '', arrivalGate: 'Main Gate 1' });
+      setForm({
+        flatNumber: '',
+        residentName: '',
+        carrier: 'Amazon',
+        packageCount: 1,
+        trackingNumber: '',
+        notes: '',
+        arrivalGate: 'Main Gate 1',
+        requiresCourierOtp: true,
+      });
       setShowForm(false);
       setFeedback('');
     } catch (err) {
       setFeedback(err?.response?.data?.message || 'Failed to log delivery.');
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleShareWithCourier = async (deliveryId) => {
+    setSharingOtpId(deliveryId);
+    try {
+      await onMarkOtpShared(deliveryId);
+    } finally {
+      setSharingOtpId(null);
     }
   };
 
@@ -270,13 +443,13 @@ function SecurityDeliveriesView({ deliveries, loading, onRefresh, onLogDelivery,
           <p className="text-2xl font-bold text-teal-700">{waiting.length}</p>
           <p className="text-xs text-slate-500 mt-1 font-medium">Waiting at Gate</p>
         </div>
-        <div className="bg-white rounded-2xl border border-slate-200 p-4 text-center shadow-sm">
-          <p className="text-2xl font-bold text-emerald-600">{deliveries.filter(d => d.status === 'Picked Up').length}</p>
-          <p className="text-xs text-slate-500 mt-1 font-medium">Picked Up Today</p>
+        <div className="bg-white rounded-2xl border border-amber-200 bg-amber-50/40 p-4 text-center shadow-sm">
+          <p className="text-2xl font-bold text-amber-700">{needsOtp.length}</p>
+          <p className="text-xs text-amber-700 mt-1 font-medium">Awaiting Courier PIN</p>
         </div>
         <div className="bg-white rounded-2xl border border-slate-200 p-4 text-center shadow-sm">
-          <p className="text-2xl font-bold text-slate-700">{deliveries.length}</p>
-          <p className="text-xs text-slate-500 mt-1 font-medium">Total Logged</p>
+          <p className="text-2xl font-bold text-emerald-600">{deliveries.filter(d => d.status === 'Picked Up').length}</p>
+          <p className="text-xs text-slate-500 mt-1 font-medium">Collected Today</p>
         </div>
       </div>
 
@@ -303,7 +476,7 @@ function SecurityDeliveriesView({ deliveries, loading, onRefresh, onLogDelivery,
           className="flex items-center gap-2 px-5 py-2.5 bg-teal-700 hover:bg-teal-600 text-white text-sm font-semibold rounded-xl transition-all shadow-sm"
         >
           <Plus className="w-4 h-4" />
-          Log Delivery
+          Log Incoming Parcel
         </button>
       </div>
 
@@ -313,7 +486,7 @@ function SecurityDeliveriesView({ deliveries, loading, onRefresh, onLogDelivery,
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-bold text-slate-800 flex items-center gap-2">
               <Package className="w-5 h-5 text-teal-600" />
-              Log Incoming Parcel
+              Log Incoming Parcel at Gate
             </h3>
             <button onClick={() => { setShowForm(false); setFeedback(''); }} className="text-slate-400 hover:text-slate-600">
               <X className="w-5 h-5" />
@@ -341,14 +514,17 @@ function SecurityDeliveriesView({ deliveries, loading, onRefresh, onLogDelivery,
               />
             </div>
 
-            <div>
-              <label className="text-xs font-semibold text-slate-600 mb-1 block">Carrier / Service</label>
+            <div className="sm:col-span-2">
+              <label className="text-xs font-semibold text-slate-600 mb-1 block">Carrier / Courier Company</label>
               <div className="flex flex-wrap gap-2 pt-1">
-                {['Amazon', 'Flipkart', 'Swiggy', 'Zomato', 'Blinkit', 'BlueDart', 'DTDC', 'Other'].map(c => (
+                {CARRIERS.map(c => (
                   <button
                     key={c}
                     type="button"
-                    onClick={() => setForm(prev => ({ ...prev, carrier: c }))}
+                    onClick={() => {
+                      const requiresOtp = ['Amazon', 'Flipkart', 'Swiggy', 'Zomato', 'Blinkit', 'Zepto', 'BlueDart', 'DTDC'].includes(c);
+                      setForm(prev => ({ ...prev, carrier: c, requiresCourierOtp: requiresOtp }));
+                    }}
                     className={`px-3 py-1.5 text-xs font-semibold rounded-lg border transition-all ${
                       form.carrier === c
                         ? 'bg-teal-700 text-white border-teal-700'
@@ -359,6 +535,23 @@ function SecurityDeliveriesView({ deliveries, loading, onRefresh, onLogDelivery,
                   </button>
                 ))}
               </div>
+            </div>
+
+            {/* Courier OTP Requirement Toggle */}
+            <div className="sm:col-span-2 bg-amber-50/80 border border-amber-200 p-3.5 rounded-xl flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5">
+                <Key className="w-5 h-5 text-amber-600 flex-shrink-0" />
+                <div>
+                  <p className="text-xs font-bold text-amber-900">Courier Requires Delivery OTP from Resident</p>
+                  <p className="text-xs text-amber-700">Resident will be prompted on their phone to share the Amazon/Flipkart PIN.</p>
+                </div>
+              </div>
+              <input
+                type="checkbox"
+                checked={form.requiresCourierOtp}
+                onChange={e => setForm(prev => ({ ...prev, requiresCourierOtp: e.target.checked }))}
+                className="w-5 h-5 accent-teal-600 rounded cursor-pointer"
+              />
             </div>
 
             <div>
@@ -374,11 +567,11 @@ function SecurityDeliveriesView({ deliveries, loading, onRefresh, onLogDelivery,
             </div>
 
             <div>
-              <label className="text-xs font-semibold text-slate-600 mb-1 block">Tracking Number</label>
+              <label className="text-xs font-semibold text-slate-600 mb-1 block">Tracking Number (Optional)</label>
               <input
                 value={form.trackingNumber}
                 onChange={e => setForm(prev => ({ ...prev, trackingNumber: e.target.value }))}
-                placeholder="Optional"
+                placeholder="e.g. AMZ-IN-88910"
                 className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
               />
             </div>
@@ -397,11 +590,11 @@ function SecurityDeliveriesView({ deliveries, loading, onRefresh, onLogDelivery,
             </div>
 
             <div className="sm:col-span-2">
-              <label className="text-xs font-semibold text-slate-600 mb-1 block">Notes (optional)</label>
+              <label className="text-xs font-semibold text-slate-600 mb-1 block">Rack Location / Notes (Optional)</label>
               <input
                 value={form.notes}
                 onChange={e => setForm(prev => ({ ...prev, notes: e.target.value }))}
-                placeholder="e.g. Fragile item, Parcel Rack Shelf B-3, Refrigerated item..."
+                placeholder="e.g. Parcel Rack Shelf B-2, Fragile box..."
                 className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
               />
             </div>
@@ -413,16 +606,20 @@ function SecurityDeliveriesView({ deliveries, loading, onRefresh, onLogDelivery,
               </div>
             )}
 
-            <div className="sm:col-span-2 flex gap-3">
+            <div className="sm:col-span-2 flex gap-3 pt-2">
               <button
                 type="submit"
                 disabled={submitting}
                 className="flex-1 py-2.5 bg-teal-700 hover:bg-teal-600 text-white text-sm font-semibold rounded-xl transition-all disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />}
-                {submitting ? 'Logging...' : 'Log Parcel at Gate'}
+                {submitting ? 'Logging...' : 'Confirm & Log Parcel at Gate'}
               </button>
-              <button type="button" onClick={() => { setShowForm(false); setFeedback(''); }} className="px-5 py-2.5 border border-slate-200 text-slate-600 text-sm font-medium rounded-xl hover:bg-slate-50 transition-all">
+              <button
+                type="button"
+                onClick={() => { setShowForm(false); setFeedback(''); }}
+                className="px-5 py-2.5 border border-slate-200 text-slate-600 text-sm font-medium rounded-xl hover:bg-slate-50 transition-all"
+              >
                 Cancel
               </button>
             </div>
@@ -434,9 +631,11 @@ function SecurityDeliveriesView({ deliveries, loading, onRefresh, onLogDelivery,
       <div>
         <h3 className="font-bold text-slate-700 mb-3 flex items-center gap-2">
           <Package className="w-4 h-4 text-amber-500" />
-          Waiting at Gate
+          Active Gate Parcels
           {filtered.length > 0 && (
-            <span className="bg-amber-100 text-amber-700 text-xs font-bold px-2 py-0.5 rounded-full border border-amber-200">{filtered.length}</span>
+            <span className="bg-amber-100 text-amber-700 text-xs font-bold px-2 py-0.5 rounded-full border border-amber-200">
+              {filtered.length}
+            </span>
           )}
         </h3>
 
@@ -454,34 +653,85 @@ function SecurityDeliveriesView({ deliveries, loading, onRefresh, onLogDelivery,
             {filtered.map(d => {
               const colors = CARRIER_COLORS[d.carrier] || CARRIER_COLORS.Other;
               return (
-                <div key={d._id} className="bg-white rounded-2xl border border-slate-200 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm hover:shadow-md transition-shadow">
-                  <div className="flex items-center gap-4">
-                    <div className={`w-10 h-10 rounded-xl ${colors.bg} border ${colors.border} flex items-center justify-center flex-shrink-0`}>
-                      <Package className={`w-5 h-5 ${colors.text}`} />
+                <div
+                  key={d._id}
+                  className="bg-white rounded-2xl border border-slate-200 p-4 flex flex-col lg:flex-row lg:items-center justify-between gap-4 shadow-sm hover:shadow-md transition-shadow"
+                >
+                  {/* Left: Parcel Meta */}
+                  <div className="flex items-start gap-4">
+                    <div className={`w-12 h-12 rounded-xl ${colors.bg} border ${colors.border} flex items-center justify-center flex-shrink-0`}>
+                      <Package className={`w-6 h-6 ${colors.text}`} />
                     </div>
                     <div>
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${colors.bg} ${colors.text} border ${colors.border}`}>{d.carrier}</span>
-                        <span className="font-bold text-slate-800 text-sm">{d.flatNumber}</span>
+                        <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${colors.bg} ${colors.text} border ${colors.border}`}>
+                          {d.carrier}
+                        </span>
+                        <span className="font-bold text-slate-800 text-base">Flat {d.flatNumber}</span>
                         <span className="text-xs text-slate-400 font-mono">{d.deliveryNumber}</span>
                       </div>
-                      <p className="text-xs text-slate-500 mt-0.5">
-                        {d.residentName || 'Resident'} • {d.packageCount} pkg{d.packageCount > 1 ? 's' : ''} • {timeAgo(d.arrivedAt)}
+                      <p className="text-xs text-slate-500 mt-1">
+                        {d.residentName || 'Resident'} • {d.packageCount} pkg{d.packageCount > 1 ? 's' : ''} • Arrived {timeAgo(d.arrivedAt)} at {d.arrivalGate || 'Main Gate 1'}
                       </p>
+                      {d.notes && (
+                        <p className="text-xs text-slate-600 bg-slate-50 border border-slate-100 rounded-lg px-2.5 py-1 mt-1.5 inline-block">
+                          📍 {d.notes}
+                        </p>
+                      )}
                     </div>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <div className="text-center bg-teal-50 border border-teal-200 rounded-xl px-4 py-2">
-                      <p className="text-xs text-teal-600 font-medium">PIN</p>
-                      <p className="text-lg font-mono font-bold text-teal-800 tracking-widest">{d.pickupOtp}</p>
-                    </div>
+
+                  {/* Right: Courier PIN and Handover Controls */}
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 self-stretch lg:self-auto pt-3 lg:pt-0 border-t lg:border-t-0 border-slate-100">
+                    {/* Courier OTP Badge / Action */}
+                    {d.requiresCourierOtp && (
+                      <div className="w-full sm:w-auto">
+                        {d.courierDeliveryOtp ? (
+                          <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-2 flex items-center gap-3">
+                            <div>
+                              <p className="text-[10px] font-bold uppercase tracking-wider text-amber-700">Resident's Courier PIN</p>
+                              <p className="text-xl font-mono font-black text-amber-950 tracking-widest">{d.courierDeliveryOtp}</p>
+                            </div>
+
+                            {!d.otpSharedWithCourier ? (
+                              <button
+                                type="button"
+                                onClick={() => handleShareWithCourier(d._id)}
+                                disabled={sharingOtpId === d._id}
+                                className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 whitespace-nowrap shadow-sm"
+                              >
+                                {sharingOtpId === d._id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Key className="w-3.5 h-3.5" />}
+                                Share with Courier
+                              </button>
+                            ) : (
+                              <span className="text-xs font-bold text-emerald-700 bg-emerald-100 border border-emerald-300 px-2.5 py-1 rounded-lg flex items-center gap-1">
+                                <CheckCircle2 className="w-3.5 h-3.5" />
+                                PIN Shared
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="bg-amber-50/80 border border-amber-200 text-amber-800 rounded-xl px-3 py-2 text-xs flex items-center gap-2">
+                            <ShieldAlert className="w-4 h-4 text-amber-600 animate-pulse flex-shrink-0" />
+                            <span>Waiting for resident to enter PIN</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Handover to Resident Button */}
                     <button
+                      type="button"
                       onClick={() => onPickup(d._id, d.pickupOtp)}
                       disabled={confirmingId === d._id}
-                      className="flex items-center gap-1.5 px-4 py-2.5 bg-emerald-700 hover:bg-emerald-600 text-white text-xs font-semibold rounded-xl transition-all disabled:opacity-50"
+                      className="w-full sm:w-auto px-4 py-2.5 bg-teal-700 hover:bg-teal-600 text-white text-xs font-semibold rounded-xl transition-all disabled:opacity-50 flex items-center justify-center gap-1.5 whitespace-nowrap shadow-sm"
                     >
-                      {confirmingId === d._id ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
-                      Handover
+                      {confirmingId === d._id ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <CheckCircle2 className="w-4 h-4" />
+                      )}
+                      Handover to Resident
                     </button>
                   </div>
                 </div>
@@ -532,7 +782,7 @@ export const DeliveriesPanel = () => {
     try {
       const res = await api.post(`/deliveries/${id}/pickup`, { otp });
       if (res.data.success) {
-        showToast(res.data.message || 'Parcel marked as picked up!');
+        showToast(res.data.message || 'Parcel marked as collected!');
         fetchDeliveries();
       }
     } catch (err) {
@@ -543,10 +793,38 @@ export const DeliveriesPanel = () => {
     }
   };
 
+  const handleShareCourierOtp = async (id, otp) => {
+    try {
+      const res = await api.post(`/deliveries/${id}/share-courier-otp`, { otp });
+      if (res.data.success) {
+        showToast('Courier delivery PIN shared with Gate Security!');
+        fetchDeliveries();
+      }
+    } catch (err) {
+      const msg = err?.response?.data?.message || 'Failed to share delivery OTP.';
+      showToast(msg, 'error');
+      throw err;
+    }
+  };
+
+  const handleMarkOtpShared = async (id) => {
+    try {
+      const res = await api.post(`/deliveries/${id}/otp-shared`);
+      if (res.data.success) {
+        showToast(res.data.message || 'PIN marked as shared with courier!');
+        fetchDeliveries();
+      }
+    } catch (err) {
+      const msg = err?.response?.data?.message || 'Failed to update delivery status.';
+      showToast(msg, 'error');
+      throw err;
+    }
+  };
+
   const handleLogDelivery = async (formData) => {
     const res = await api.post('/deliveries', formData);
     if (res.data.success) {
-      showToast(`${res.data.delivery.deliveryNumber} logged. Pickup PIN: ${res.data.delivery.pickupOtp}`);
+      showToast(`${res.data.delivery.deliveryNumber} logged at gate successfully!`);
       fetchDeliveries();
     }
   };
@@ -572,8 +850,8 @@ export const DeliveriesPanel = () => {
           </h2>
           <p className="text-sm text-slate-500 mt-0.5">
             {user?.role === 'security' || user?.role === 'admin'
-              ? 'Log incoming parcels and manage parcel handovers at the gate'
-              : 'Track and collect your parcels arriving at the society gate'}
+              ? 'Log incoming parcels and manage courier delivery PINs at the gate'
+              : 'Share courier delivery PINs with security and collect your packages'}
           </p>
         </div>
       </div>
@@ -585,6 +863,7 @@ export const DeliveriesPanel = () => {
           loading={loading}
           onRefresh={fetchDeliveries}
           onPickup={handlePickup}
+          onShareCourierOtp={handleShareCourierOtp}
           confirmingId={confirmingId}
         />
       ) : (
@@ -594,6 +873,7 @@ export const DeliveriesPanel = () => {
           onRefresh={fetchDeliveries}
           onLogDelivery={handleLogDelivery}
           onPickup={handlePickup}
+          onMarkOtpShared={handleMarkOtpShared}
           confirmingId={confirmingId}
         />
       )}

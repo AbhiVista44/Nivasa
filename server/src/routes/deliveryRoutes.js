@@ -61,6 +61,7 @@ router.post('/', verifyToken, requireRoles('security', 'admin'), async (req, res
       arrivalGate,
       notes,
       photoBase64,
+      requiresCourierOtp,
     } = req.body;
 
     if (!flatNumber) {
@@ -95,6 +96,7 @@ router.post('/', verifyToken, requireRoles('security', 'admin'), async (req, res
       packageCount: Number(packageCount) || 1,
       trackingNumber: trackingNumber || '',
       photoUrl,
+      requiresCourierOtp: requiresCourierOtp !== undefined ? requiresCourierOtp : true,
       arrivalGate: arrivalGate || 'Main Gate 1',
       notes: notes || '',
     }, req.user);
@@ -110,7 +112,66 @@ router.post('/', verifyToken, requireRoles('security', 'admin'), async (req, res
   }
 });
 
-// 4. Resident or Security confirms pickup
+// 4. Resident shares courier OTP (e.g. Amazon/Flipkart PIN) with Gate Security
+router.post('/:id/share-courier-otp', verifyToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { otp } = req.body;
+
+    if (!otp) {
+      return res.status(400).json({
+        success: false,
+        message: 'Delivery OTP is required.',
+      });
+    }
+
+    const delivery = await dataStore.shareCourierDeliveryOtp(id, otp, req.user);
+    if (!delivery) {
+      return res.status(404).json({
+        success: false,
+        message: 'Delivery record not found.',
+      });
+    }
+
+    res.json({
+      success: true,
+      message: `Courier delivery OTP shared with Gate Security.`,
+      delivery,
+    });
+  } catch (error) {
+    if (error.code === 'UNAUTHORIZED') {
+      return res.status(403).json({ success: false, message: error.message });
+    }
+    console.error('Share courier OTP error:', error);
+    res.status(500).json({ success: false, message: error.message || 'Failed to share courier OTP.' });
+  }
+});
+
+// 5. Security marks courier OTP as shared with delivery agent
+router.post('/:id/otp-shared', verifyToken, requireRoles('security', 'admin'), async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const delivery = await dataStore.markCourierOtpShared(id, req.user);
+    if (!delivery) {
+      return res.status(404).json({
+        success: false,
+        message: 'Delivery record not found.',
+      });
+    }
+
+    res.json({
+      success: true,
+      message: `OTP marked as shared with ${delivery.carrier} courier. Parcel safely stored at gate.`,
+      delivery,
+    });
+  } catch (error) {
+    console.error('Mark OTP shared error:', error);
+    res.status(500).json({ success: false, message: error.message || 'Failed to update delivery status.' });
+  }
+});
+
+// 6. Resident or Security confirms pickup / collection
 router.post('/:id/pickup', verifyToken, async (req, res) => {
   try {
     const { id } = req.params;

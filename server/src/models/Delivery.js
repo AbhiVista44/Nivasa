@@ -51,9 +51,26 @@ const deliverySchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['Waiting at Gate', 'Picked Up', 'Returned'],
+    enum: ['Waiting for Courier OTP', 'Waiting at Gate', 'Picked Up', 'Returned'],
     default: 'Waiting at Gate',
     index: true,
+  },
+  requiresCourierOtp: {
+    type: Boolean,
+    default: true,
+  },
+  courierDeliveryOtp: {
+    type: String,
+    default: '',
+    trim: true,
+  },
+  otpSharedWithCourier: {
+    type: Boolean,
+    default: false,
+  },
+  otpSharedAt: {
+    type: Date,
+    default: null,
   },
   arrivalGate: {
     type: String,
@@ -77,7 +94,7 @@ const deliverySchema = new mongoose.Schema({
   },
   pickupOtp: {
     type: String,
-    required: true,
+    default: '',
   },
   notes: {
     type: String,

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
 import {
@@ -19,6 +19,7 @@ import {
   Share2,
   Edit2,
   ShieldAlert,
+  UserCheck,
 } from 'lucide-react';
 
 const CARRIERS = ['Amazon', 'Flipkart', 'Swiggy', 'Zomato', 'Blinkit', 'Zepto', 'BlueDart', 'DTDC', 'India Post', 'Other'];
@@ -378,10 +379,81 @@ function SecurityDeliveriesView({
     arrivalGate: 'Main Gate 1',
     requiresCourierOtp: true,
   });
+  const [flats, setFlats] = useState([]);
+  const [loadingFlats, setLoadingFlats] = useState(false);
+  const [selectedResidentKey, setSelectedResidentKey] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [sharingOtpId, setSharingOtpId] = useState(null);
   const [feedback, setFeedback] = useState('');
   const [search, setSearch] = useState('');
+
+  // Fetch society flats & residents for easy parcel routing
+  useEffect(() => {
+    let isMounted = true;
+    setLoadingFlats(true);
+    api.get('/flats')
+      .then(res => {
+        if (isMounted && res.data.success) {
+          setFlats(res.data.flats || []);
+        }
+      })
+      .catch(err => console.error('Failed to load society flats:', err))
+      .finally(() => {
+        if (isMounted) setLoadingFlats(false);
+      });
+    return () => { isMounted = false; };
+  }, []);
+
+  // Compute a flat & resident option directory
+  const residentOptions = useMemo(() => {
+    const list = [];
+    flats.forEach(f => {
+      if (f.primaryResident?.name) {
+        list.push({
+          key: `${f.flatNumber}-primary-${f.primaryResident.name}`,
+          name: f.primaryResident.name,
+          flatNumber: f.flatNumber,
+          wing: f.wing || 'Wing B',
+          type: 'Primary Resident',
+        });
+      }
+      if (Array.isArray(f.familyMembers)) {
+        f.familyMembers.forEach((m, idx) => {
+          if (m.name && m.name !== f.primaryResident?.name) {
+            list.push({
+              key: `${f.flatNumber}-family-${idx}-${m.name}`,
+              name: m.name,
+              flatNumber: f.flatNumber,
+              wing: f.wing || 'Wing B',
+              type: m.relation ? `Family (${m.relation})` : 'Resident',
+            });
+          }
+        });
+      }
+    });
+
+    return list.sort((a, b) => {
+      const flatCmp = a.flatNumber.localeCompare(b.flatNumber, undefined, { numeric: true });
+      if (flatCmp !== 0) return flatCmp;
+      return a.name.localeCompare(b.name);
+    });
+  }, [flats]);
+
+  const handleResidentSelect = (key) => {
+    setSelectedResidentKey(key);
+    if (!key || key === 'custom') {
+      return;
+    }
+    const found = residentOptions.find(r => r.key === key);
+    if (found) {
+      setForm(prev => ({
+        ...prev,
+        residentName: found.name,
+        flatNumber: found.flatNumber,
+        wing: found.wing,
+      }));
+    }
+  };
 
   const waiting = deliveries.filter(d => d.status === 'Waiting at Gate' || d.status === 'Waiting for Courier OTP');
   const needsOtp = waiting.filter(d => d.requiresCourierOtp && !d.otpSharedWithCourier);
@@ -417,6 +489,7 @@ function SecurityDeliveriesView({
         arrivalGate: 'Main Gate 1',
         requiresCourierOtp: true,
       });
+      setSelectedResidentKey('');
       setShowForm(false);
       setFeedback('');
     } catch (err) {
@@ -498,20 +571,57 @@ function SecurityDeliveriesView({
               <label className="text-xs font-semibold text-slate-600 mb-1 block">Recipient Flat *</label>
               <input
                 value={form.flatNumber}
-                onChange={e => setForm(prev => ({ ...prev, flatNumber: e.target.value }))}
+                onChange={e => {
+                  const val = e.target.value;
+                  setForm(prev => ({ ...prev, flatNumber: val }));
+                  const matched = residentOptions.find(r => r.flatNumber.toLowerCase() === val.trim().toLowerCase());
+                  if (matched) {
+                    setSelectedResidentKey(matched.key);
+                    setForm(prev => ({ ...prev, residentName: matched.name, wing: matched.wing }));
+                  }
+                }}
                 placeholder="e.g. B-402"
-                className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+                className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-500"
                 required
               />
             </div>
-            <div>
-              <label className="text-xs font-semibold text-slate-600 mb-1 block">Resident Name</label>
-              <input
-                value={form.residentName}
-                onChange={e => setForm(prev => ({ ...prev, residentName: e.target.value }))}
-                placeholder="e.g. Rahul Verma"
-                className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
-              />
+
+            <div className="sm:col-span-1">
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-xs font-semibold text-slate-600">Resident Name (Dropdown) *</label>
+                {loadingFlats && (
+                  <span className="text-[10px] text-teal-600 flex items-center gap-1">
+                    <Loader2 className="w-3 h-3 animate-spin" /> Loading...
+                  </span>
+                )}
+              </div>
+
+              {/* Resident Name dropdown menu showing names and flat numbers living in the society */}
+              <select
+                value={selectedResidentKey}
+                onChange={e => handleResidentSelect(e.target.value)}
+                className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-500 truncate"
+              >
+                <option value="">
+                  {loadingFlats ? 'Loading resident directory...' : '-- Select Resident (Name & Flat No.) --'}
+                </option>
+                {residentOptions.map(r => (
+                  <option key={r.key} value={r.key}>
+                    {r.name} — Flat {r.flatNumber} ({r.wing})
+                  </option>
+                ))}
+                <option value="custom">✍️ Other / Custom Resident Name</option>
+              </select>
+
+              {/* If custom is selected or if guard wants to customize the name */}
+              {selectedResidentKey === 'custom' && (
+                <input
+                  value={form.residentName}
+                  onChange={e => setForm(prev => ({ ...prev, residentName: e.target.value }))}
+                  placeholder="Type custom resident name"
+                  className="mt-2 w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 animate-in fade-in"
+                />
+              )}
             </div>
 
             <div className="sm:col-span-2">

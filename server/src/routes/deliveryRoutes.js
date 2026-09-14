@@ -1,6 +1,7 @@
 import express from 'express';
 import { dataStore } from '../services/dataStore.js';
 import { storageService } from '../services/storageService.js';
+import { socketService } from '../services/socketService.js';
 import { verifyToken, requireRoles } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -100,6 +101,9 @@ router.post('/', verifyToken, requireRoles('security', 'admin'), async (req, res
       arrivalGate: arrivalGate || 'Main Gate 1',
       notes: notes || '',
     }, req.user);
+
+    // Real-time broadcast to Resident flat
+    socketService.broadcastDeliveryArrival(societyId, delivery);
 
     res.status(201).json({
       success: true,

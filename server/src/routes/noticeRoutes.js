@@ -1,5 +1,7 @@
 import express from 'express';
 import { dataStore } from '../services/dataStore.js';
+import { socketService } from '../services/socketService.js';
+import { emailService } from '../services/emailService.js';
 import { verifyToken, requireRoles } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -62,6 +64,16 @@ router.post('/', verifyToken, requireRoles(['admin']), async (req, res) => {
       details: { title, type },
       severity: type === 'urgent' ? 'critical' : 'info',
     });
+
+    // Real-time broadcast to all connected residents
+    if (notice.isPublished) {
+      socketService.broadcastNotice(societyId, notice);
+
+      // If urgent, dispatch email alert to community
+      if (type === 'urgent') {
+        emailService.sendUrgentNoticeEmail('residents@gulmohargreens.org', notice, { name: 'Gulmohar Greens Heights' });
+      }
+    }
 
     res.status(201).json({ success: true, message: 'Notice published successfully.', notice });
   } catch (error) {

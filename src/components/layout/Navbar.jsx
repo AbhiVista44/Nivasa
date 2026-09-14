@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { useSocket } from '../../context/SocketContext';
+import { NotificationTray } from '../notifications/NotificationTray';
+import { NotificationPreferencesModal } from '../notifications/NotificationPreferencesModal';
 import {
   Building2,
   Shield,
@@ -10,26 +13,24 @@ import {
   LogOut,
   Sparkles,
   MapPin,
-  Check
+  Check,
+  Wifi,
+  WifiOff
 } from 'lucide-react';
 
 export const Navbar = () => {
   const { user, society, societies, role, switchRole, switchSociety, logout } = useAuth();
+  const { unreadCount, connected } = useSocket();
   const [societyDropdownOpen, setSocietyDropdownOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [preferencesOpen, setPreferencesOpen] = useState(false);
 
   const rolesConfig = [
     { id: 'admin', label: 'Admin', icon: Shield, color: 'text-indigo-700 bg-indigo-50 border-indigo-200 hover:bg-indigo-100', activeRing: 'ring-2 ring-indigo-500' },
     { id: 'resident', label: 'Resident', icon: Home, color: 'text-emerald-800 bg-emerald-50 border-emerald-200 hover:bg-emerald-100', activeRing: 'ring-2 ring-emerald-600' },
     { id: 'security', label: 'Security', icon: Shield, color: 'text-amber-800 bg-amber-50 border-amber-200 hover:bg-amber-100', activeRing: 'ring-2 ring-amber-500' },
     { id: 'vendor', label: 'Vendor', icon: Wrench, color: 'text-orange-800 bg-orange-50 border-orange-200 hover:bg-orange-100', activeRing: 'ring-2 ring-orange-500' },
-  ];
-
-  const demoNotifications = [
-    { id: 1, title: 'Gate Alert: Amazon Delivery', desc: 'Package arrived at Main Gate for Flat B-402', time: '5m ago', unread: true },
-    { id: 2, title: 'Complaint Status Updated', desc: 'Plumbing request moved to "In Progress"', time: '25m ago', unread: true },
-    { id: 3, title: 'Society Notice', desc: 'Annual Clubhouse Maintenance on Saturday', time: '2h ago', unread: false },
   ];
 
   return (
@@ -125,39 +126,50 @@ export const Navbar = () => {
         {/* Right: Notifications & Profile */}
         <div className="flex items-center gap-3">
           
-          {/* Notifications */}
+          {/* Real-Time Notifications Hub */}
           <div className="relative">
             <button
               onClick={() => setNotificationsOpen(!notificationsOpen)}
-              className="relative p-2 text-slate-600 hover:text-teal-700 hover:bg-slate-100 rounded-lg transition"
-              aria-label="Notifications"
+              className={`relative p-2 rounded-xl transition ${
+                notificationsOpen
+                  ? 'bg-teal-50 text-teal-800'
+                  : 'text-slate-600 hover:text-teal-700 hover:bg-slate-100'
+              }`}
+              aria-label="Real-time notifications"
+              title={connected ? 'Real-Time Sync Active' : 'Connecting to Live Socket Hub...'}
             >
               <Bell className="w-5 h-5" />
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-amber-500 rounded-full ring-2 ring-white animate-pulse" />
+
+              {/* Live Connection Dot */}
+              <span
+                className={`absolute bottom-1 right-1 w-2 h-2 rounded-full ring-2 ring-white ${
+                  connected ? 'bg-emerald-500' : 'bg-amber-400 animate-ping'
+                }`}
+                title={connected ? 'Socket Connected' : 'Socket Reconnecting'}
+              />
+
+              {/* Unread Count Badge */}
+              {unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-amber-500 text-slate-900 font-extrabold text-[10px] rounded-full flex items-center justify-center ring-2 ring-white shadow-xs animate-in zoom-in-50">
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              )}
             </button>
 
             {notificationsOpen && (
-              <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-xl border border-slate-200 py-2 z-50">
-                <div className="px-4 py-2 border-b border-slate-100 flex items-center justify-between">
-                  <span className="font-semibold text-xs text-slate-800">Notifications</span>
-                  <span className="text-[10px] bg-amber-100 text-amber-800 font-bold px-1.5 py-0.5 rounded-full">
-                    2 New
-                  </span>
-                </div>
-                <div className="divide-y divide-slate-100 max-h-72 overflow-y-auto">
-                  {demoNotifications.map((n) => (
-                    <div key={n.id} className={`p-3 hover:bg-slate-50 text-xs transition ${n.unread ? 'bg-amber-50/40' : ''}`}>
-                      <div className="flex items-center justify-between">
-                        <p className="font-semibold text-slate-800">{n.title}</p>
-                        <span className="text-[10px] text-slate-400">{n.time}</span>
-                      </div>
-                      <p className="text-slate-600 mt-0.5">{n.desc}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
+              <NotificationTray
+                onClose={() => setNotificationsOpen(false)}
+                onOpenPreferences={() => {
+                  setNotificationsOpen(false);
+                  setPreferencesOpen(true);
+                }}
+              />
             )}
           </div>
+
+          {preferencesOpen && (
+            <NotificationPreferencesModal onClose={() => setPreferencesOpen(false)} />
+          )}
 
           {/* User Profile Pill */}
           <div className="relative">

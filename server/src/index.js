@@ -1,9 +1,11 @@
 import './loadEnv.js';
+import http from 'node:http';
 import express from 'express';
 import cors from 'cors';
 import mongoose from 'mongoose';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { socketService } from './services/socketService.js';
 import authRoutes from './routes/authRoutes.js';
 import societyRoutes from './routes/societyRoutes.js';
 import flatRoutes from './routes/flatRoutes.js';
@@ -19,9 +21,12 @@ import auditRoutes from './routes/auditRoutes.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-
 const app = express();
+const server = http.createServer(app);
 const PORT = process.env.PORT || 5000;
+
+// Initialize Socket.IO
+socketService.init(server);
 
 // Middlewares
 app.use(cors({
@@ -82,7 +87,7 @@ const connectDB = async () => {
 
 connectDB();
 
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log(`🚀 Nivasa Backend API running on http://localhost:${PORT}`);
   console.log(`✨ Available Roles: Society Admin | Resident | Security | Vendor`);
 });

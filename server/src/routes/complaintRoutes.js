@@ -2,6 +2,7 @@ import express from 'express';
 import { dataStore } from '../services/dataStore.js';
 import { classifyComplaint } from '../services/aiClassifier.js';
 import { storageService } from '../services/storageService.js';
+import { socketService } from '../services/socketService.js';
 import { verifyToken, requireRoles } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -154,6 +155,9 @@ router.post('/', verifyToken, async (req, res) => {
       details: { title, category: complaintData.category, priority: complaintData.priority },
     });
 
+    // Real-time broadcast complaint creation
+    socketService.broadcastComplaintUpdate(societyId, newComplaint);
+
     res.status(201).json({
       success: true,
       message: `Complaint ${newComplaint.complaintNumber} registered successfully.`,
@@ -200,6 +204,9 @@ router.put('/:id/status', verifyToken, async (req, res) => {
       targetId: updated.complaintNumber,
       details: { fromStatus: updated.status, toStatus: status, note },
     });
+
+    // Real-time broadcast complaint status transition
+    socketService.broadcastComplaintUpdate(updated.societyId, updated);
 
     res.json({
       success: true,
@@ -248,6 +255,9 @@ router.put('/:id/assign-vendor', verifyToken, requireRoles('admin'), async (req,
       targetId: updated.complaintNumber,
       details: { vendorName, businessName },
     });
+
+    // Real-time broadcast vendor assignment
+    socketService.broadcastComplaintUpdate(updated.societyId, updated);
 
     res.json({
       success: true,

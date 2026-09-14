@@ -1,6 +1,8 @@
 import express from 'express';
 import { dataStore } from '../services/dataStore.js';
 import { storageService } from '../services/storageService.js';
+import { socketService } from '../services/socketService.js';
+import { emailService } from '../services/emailService.js';
 import { verifyToken, requireRoles } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -158,6 +160,9 @@ router.post('/walk-in', verifyToken, requireRoles('security', 'admin'), async (r
       details: { visitorName: name, flatNumber, status: visitor.status },
     });
 
+    // Real-time broadcast to Resident flat and Security console
+    socketService.broadcastGateArrival(req.user.societyId, visitor);
+
     res.status(201).json({
       success: true,
       message: visitor.status === 'Inside'
@@ -220,6 +225,9 @@ router.post('/:id/entry', verifyToken, requireRoles('security', 'admin'), async 
       details: { visitorName: updated.name, flatNumber: updated.flatNumber },
     });
 
+    // Real-time broadcast entry status
+    socketService.broadcastGateApproval(req.user.societyId, updated);
+
     res.json({
       success: true,
       message: `${updated.name} authorized into society.`,
@@ -281,6 +289,9 @@ router.post('/:id/approve', verifyToken, requireRoles('resident', 'admin'), asyn
       details: { visitorName: updated.name, flatNumber: updated.flatNumber },
     });
 
+    // Real-time broadcast approval to Security console
+    socketService.broadcastGateApproval(req.user.societyId, updated);
+
     res.json({
       success: true,
       message: `Gate entry approved for ${updated.name}.`,
@@ -311,6 +322,9 @@ router.post('/:id/reject', verifyToken, requireRoles('resident', 'admin'), async
       targetId: updated._id?.toString() || updated.visitorNumber,
       details: { visitorName: updated.name, flatNumber: updated.flatNumber },
     });
+
+    // Real-time broadcast denial to Security console
+    socketService.broadcastGateApproval(req.user.societyId, updated);
 
     res.json({
       success: true,

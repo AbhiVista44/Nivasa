@@ -14,6 +14,9 @@ import { ResidentVisitorsPanel } from '../../components/visitors/ResidentVisitor
 import { ResidentApprovalsBanner } from '../../components/visitors/ResidentApprovalsBanner';
 import { DeliveriesPanel } from '../../components/deliveries/DeliveriesPanel';
 import { FacilityBookingHub } from '../../components/facilities/FacilityBookingHub';
+import { NoticeBoardHub } from '../../components/notices/NoticeBoardHub';
+import { VendorDirectoryHub } from '../../components/vendors/VendorDirectoryHub';
+import { AuditLogViewer } from '../../components/audit/AuditLogViewer';
 
 export const ResidentDashboard = ({ activeTab, onNavigate }) => {
   const { user, society } = useAuth();
@@ -49,6 +52,18 @@ export const ResidentDashboard = ({ activeTab, onNavigate }) => {
 
   if (activeTab === 'facilities') {
     return <FacilityBookingHub />;
+  }
+
+  if (activeTab === 'notices') {
+    return <NoticeBoardHub />;
+  }
+
+  if (activeTab === 'vendors') {
+    return <VendorDirectoryHub />;
+  }
+
+  if (activeTab === 'history') {
+    return <AuditLogViewer />;
   }
 
   const quickActions = [
@@ -111,7 +126,7 @@ export const ResidentDashboard = ({ activeTab, onNavigate }) => {
             Welcome home, {user?.name?.split(' ')[0] || 'Rahul'}
           </h1>
           <p className="text-xs text-teal-100/80">
-            Residence: <strong className="text-amber-300 font-mono text-sm">{user?.flatNumber || 'B-402'}</strong> • {user?.wing || 'Wing B'} • Parking Slot: <strong className="text-white font-mono">P-114 (Basement 1)</strong>
+            Residence: <strong className="text-amber-300 font-mono text-sm">{user?.flatNumber || 'B-402'}</strong> • {user?.wing || 'Wing B'} • Status: <strong className="text-emerald-300 font-medium">Active Resident (Owner)</strong>
           </p>
         </div>
 
@@ -201,7 +216,10 @@ export const ResidentDashboard = ({ activeTab, onNavigate }) => {
               <p className="font-semibold text-slate-800">Assigned Vendor: Sunil Kumar (Apex Plumbing)</p>
               <p className="text-slate-500 text-[11px]">Visit Scheduled: Today at 4:30 PM • ETA 25 mins</p>
             </div>
-            <button className="px-3 py-1.5 bg-teal-700 hover:bg-teal-800 text-white font-semibold rounded-lg text-xs transition">
+            <button
+              onClick={() => onNavigate?.('complaints')}
+              className="px-3 py-1.5 bg-teal-700 hover:bg-teal-800 text-white font-semibold rounded-lg text-xs transition cursor-pointer"
+            >
               View Work Notes
             </button>
           </div>
@@ -213,7 +231,10 @@ export const ResidentDashboard = ({ activeTab, onNavigate }) => {
             <h2 className="text-base font-bold text-slate-900 font-display">
               Expected Visitors
             </h2>
-            <button className="text-xs font-semibold text-teal-700 hover:text-teal-800">
+            <button
+              onClick={() => onNavigate?.('visitors')}
+              className="text-xs font-semibold text-teal-700 hover:text-teal-800 cursor-pointer"
+            >
               + New Pass
             </button>
           </div>

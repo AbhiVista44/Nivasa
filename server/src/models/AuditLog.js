@@ -21,10 +21,10 @@ const auditLogSchema = new mongoose.Schema({
   },
   action: {
     type: String,
-    required: true, // e.g., 'COMPLAINT_CREATED', 'VISITOR_APPROVED', 'DELIVERY_LOGGED'
+    required: true, // e.g., 'NOTICE_CREATED', 'VENDOR_ADDED', 'COMPLAINT_CLOSED'
   },
   targetType: {
-    type: String, // 'Complaint', 'Visitor', 'Delivery', 'FacilityBooking', 'User'
+    type: String, // 'Notice', 'Vendor', 'Complaint', 'Visitor', 'Delivery', 'FacilityBooking', 'User'
   },
   targetId: {
     type: String,
@@ -33,10 +33,26 @@ const auditLogSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.Mixed,
     default: {},
   },
+  severity: {
+    type: String,
+    enum: ['info', 'warning', 'critical'],
+    default: 'info',
+    index: true,
+  },
+  ipAddress: {
+    type: String,
+    default: null,
+  },
   timestamp: {
     type: Date,
     default: Date.now,
+    index: true,
   },
 });
 
+// Compound index for efficient society-scoped chronological queries
+auditLogSchema.index({ societyId: 1, timestamp: -1 });
+auditLogSchema.index({ societyId: 1, severity: 1, timestamp: -1 });
+
 export const AuditLog = mongoose.models.AuditLog || mongoose.model('AuditLog', auditLogSchema);
+

@@ -14,6 +14,9 @@ import { AdminComplaintsPanel } from '../../components/complaints/AdminComplaint
 import { AdminVisitorsView } from '../../components/admin/AdminVisitorsView';
 import { DeliveriesPanel } from '../../components/deliveries/DeliveriesPanel';
 import { FacilityBookingHub } from '../../components/facilities/FacilityBookingHub';
+import { NoticeBoardHub } from '../../components/notices/NoticeBoardHub';
+import { VendorDirectoryHub } from '../../components/vendors/VendorDirectoryHub';
+import { AuditLogViewer } from '../../components/audit/AuditLogViewer';
 
 export const AdminDashboard = ({ activeTab, onNavigate }) => {
   const { society } = useAuth();
@@ -36,6 +39,18 @@ export const AdminDashboard = ({ activeTab, onNavigate }) => {
 
   if (activeTab === 'facilities') {
     return <FacilityBookingHub />;
+  }
+
+  if (activeTab === 'notices') {
+    return <NoticeBoardHub />;
+  }
+
+  if (activeTab === 'vendors') {
+    return <VendorDirectoryHub />;
+  }
+
+  if (activeTab === 'audit') {
+    return <AuditLogViewer />;
   }
 
   const stats = [
@@ -75,7 +90,10 @@ export const AdminDashboard = ({ activeTab, onNavigate }) => {
         </div>
 
         <div className="flex items-center gap-2">
-          <button className="flex items-center gap-1.5 px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl text-xs shadow-md transition">
+          <button
+            onClick={() => onNavigate?.('notices')}
+            className="flex items-center gap-1.5 px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl text-xs shadow-md transition"
+          >
             <Plus className="w-4 h-4" />
             New Notice
           </button>
@@ -93,8 +111,13 @@ export const AdminDashboard = ({ activeTab, onNavigate }) => {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {stats.map((s, idx) => {
           const Icon = s.icon;
+          const targetTab = idx === 0 ? 'residents' : idx === 1 ? 'complaints' : idx === 2 ? 'gate' : 'facilities';
           return (
-            <div key={idx} className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs hover:shadow-md transition">
+            <div
+              key={idx}
+              onClick={() => onNavigate?.(targetTab)}
+              className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs hover:shadow-md hover:border-teal-300 transition cursor-pointer"
+            >
               <div className="flex items-center justify-between">
                 <span className="text-xs font-semibold text-slate-500">{s.title}</span>
                 <div className={`p-2 rounded-xl border ${s.color}`}>
@@ -122,7 +145,10 @@ export const AdminDashboard = ({ activeTab, onNavigate }) => {
                 Managed via 9-stage lifecycle & AI prioritization
               </p>
             </div>
-            <button className="text-xs text-teal-700 hover:text-teal-800 font-semibold flex items-center gap-1">
+            <button
+              onClick={() => onNavigate?.('complaints')}
+              className="text-xs text-teal-700 hover:text-teal-800 font-semibold flex items-center gap-1 cursor-pointer"
+            >
               View All <ArrowUpRight className="w-3.5 h-3.5" />
             </button>
           </div>
@@ -147,7 +173,10 @@ export const AdminDashboard = ({ activeTab, onNavigate }) => {
                 </div>
                 <div className="text-right shrink-0">
                   <span className="text-[10px] text-slate-400 block">{c.time}</span>
-                  <button className="mt-1 px-2.5 py-1 text-xs font-semibold bg-white border border-slate-200 hover:border-teal-400 text-slate-700 rounded-lg shadow-2xs">
+                  <button
+                    onClick={() => onNavigate?.('complaints')}
+                    className="mt-1 px-2.5 py-1 text-xs font-semibold bg-white border border-slate-200 hover:border-teal-400 text-slate-700 rounded-lg shadow-2xs cursor-pointer"
+                  >
                     Manage
                   </button>
                 </div>
@@ -167,6 +196,12 @@ export const AdminDashboard = ({ activeTab, onNavigate }) => {
                 Immutable activity records
               </p>
             </div>
+            <button
+              onClick={() => onNavigate?.('audit')}
+              className="text-xs text-teal-700 hover:text-teal-800 font-semibold flex items-center gap-1 cursor-pointer"
+            >
+              View All <ArrowUpRight className="w-3.5 h-3.5" />
+            </button>
           </div>
 
           <div className="space-y-4">

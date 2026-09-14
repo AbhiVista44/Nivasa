@@ -12,6 +12,9 @@ import visitorRoutes from './routes/visitorRoutes.js';
 import uploadRoutes from './routes/uploadRoutes.js';
 import deliveryRoutes from './routes/deliveryRoutes.js';
 import facilityRoutes from './routes/facilityRoutes.js';
+import noticeRoutes from './routes/noticeRoutes.js';
+import vendorRoutes from './routes/vendorRoutes.js';
+import auditRoutes from './routes/auditRoutes.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -46,6 +49,9 @@ app.use('/api/visitors', visitorRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/deliveries', deliveryRoutes);
 app.use('/api/facilities', facilityRoutes);
+app.use('/api/notices', noticeRoutes);
+app.use('/api/vendors', vendorRoutes);
+app.use('/api/audit', auditRoutes);
 
 // Health Check
 app.get('/api/health', (req, res) => {

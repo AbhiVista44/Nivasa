@@ -1,6 +1,7 @@
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import { initialSocieties, initialUsers, initialFlats, initialComplaints, initialVisitors, initialDeliveries, initialFacilities, initialFacilityBookings } from '../data/seedData.js';
+import { initialNotices, initialVendors } from '../data/seedDataM6.js';
 import { User } from '../models/User.js';
 import { Society } from '../models/Society.js';
 import { Flat } from '../models/Flat.js';
@@ -8,6 +9,9 @@ import { Complaint } from '../models/Complaint.js';
 import { Visitor } from '../models/Visitor.js';
 import { Delivery } from '../models/Delivery.js';
 import { FacilityBooking } from '../models/FacilityBooking.js';
+import { Notice } from '../models/Notice.js';
+import { Vendor } from '../models/Vendor.js';
+import { AuditLog } from '../models/AuditLog.js';
 import mongoose from 'mongoose';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'nivasa_super_secret_jwt_key_2026_resident_community';
@@ -25,6 +29,8 @@ class DataStore {
     this.deliveries = [...initialDeliveries];
     this.facilities = [...initialFacilities];
     this.facilityBookings = [...initialFacilityBookings];
+    this.notices = [...initialNotices];
+    this.vendors = [...initialVendors];
     this.auditLogs = [];
     this.isSeeded = false;
   }
@@ -500,17 +506,299 @@ class DataStore {
     const entry = {
       _id: 'log_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7),
       timestamp: new Date(),
+      severity: actionData.severity || 'info',
       ...actionData,
     };
+    // Persist to MongoDB if connected
+    if (this.isMongoConnected()) {
+      try {
+        const dbEntry = await AuditLog.create({
+          societyId: actionData.societyId,
+          actorId: actionData.actorId,
+          actorName: actionData.actorName,
+          actorRole: actionData.actorRole,
+          action: actionData.action,
+          targetType: actionData.targetType,
+          targetId: actionData.targetId,
+          details: actionData.details,
+          severity: actionData.severity || 'info',
+          ipAddress: actionData.ipAddress || null,
+          timestamp: new Date(),
+        });
+        return dbEntry.toObject ? dbEntry.toObject() : dbEntry;
+      } catch (e) {
+        console.warn('AuditLog persist error:', e.message);
+      }
+    }
     this.auditLogs.unshift(entry);
     if (this.auditLogs.length > 500) this.auditLogs.pop();
     return entry;
   }
 
-  async getAuditLogs(societyId, limit = 50) {
+  async getAuditLogs(societyId, filter = {}, limit = 100) {
+    const { severity, action, search } = filter;
+    if (this.isMongoConnected()) {
+      const query = {};
+      if (societyId) query.societyId = societyId;
+      if (severity && severity !== 'all') query.severity = severity;
+      if (action && action !== 'all') query.action = new RegExp(action, 'i');
+      if (search) {
+        query.$or = [
+          { actorName: new RegExp(search, 'i') },
+          { action: new RegExp(search, 'i') },
+          { targetType: new RegExp(search, 'i') },
+        ];
+      }
+      return await AuditLog.find(query).sort({ timestamp: -1 }).limit(limit);
+    }
+    // In-memory fallback
     return this.auditLogs
-      .filter(l => !societyId || l.societyId.toString() === societyId.toString())
+      .filter(l => {
+        if (societyId && l.societyId?.toString() !== societyId.toString()) return false;
+        if (severity && severity !== 'all' && l.severity !== severity) return false;
+        if (action && action !== 'all' && !l.action?.toLowerCase().includes(action.toLowerCase())) return false;
+        if (search) {
+          const s = search.toLowerCase();
+          if (!l.actorName?.toLowerCase().includes(s) && !l.action?.toLowerCase().includes(s)) return false;
+        }
+        return true;
+      })
       .slice(0, limit);
+  }
+
+  // ==========================================
+  // MILESTONE 6: NOTICE BOARD
+  // ==========================================
+
+  async getNotices(societyId, filter = {}) {
+    await this.ensureSeeded();
+    const now = new Date();
+
+    if (this.isMongoConnected()) {
+      // Auto-publish scheduled notices that have matured
+      await Notice.updateMany(
+        { societyId, isPublished: false, scheduledAt: { $lte: now } },
+        { $set: { isPublished: true, publishedAt: now } }
+      );
+
+      const { type, wing, isPublished, search } = filter;
+      const query = { societyId };
+      if (type && type !== 'all') query.type = type;
+      if (isPublished !== undefined) query.isPublished = isPublished;
+      if (wing) query.$or = [{ targetWing: null }, { targetWing: wing }];
+      if (search) query.$or = [{ title: new RegExp(search, 'i') }, { body: new RegExp(search, 'i') }];
+      return await Notice.find(query).sort({ type: 1, publishedAt: -1, createdAt: -1 });
+    }
+
+    // Auto-publish in-memory scheduled notices that have matured
+    this.notices.forEach(n => {
+      if (!n.isPublished && n.scheduledAt && new Date(n.scheduledAt) <= now) {
+        n.isPublished = true;
+        n.publishedAt = n.scheduledAt;
+      }
+    });
+
+    const { type, wing, isPublished, search } = filter;
+    return this.notices
+      .filter(n => {
+        if (societyId && n.societyId.toString() !== societyId.toString()) return false;
+        if (type && type !== 'all' && n.type !== type) return false;
+        if (isPublished !== undefined && n.isPublished !== isPublished) return false;
+        if (wing && n.targetWing && n.targetWing !== wing) return false;
+        if (search) {
+          const s = search.toLowerCase();
+          if (!n.title.toLowerCase().includes(s) && !n.body.toLowerCase().includes(s)) return false;
+        }
+        return true;
+      })
+      .sort((a, b) => {
+        // Urgent first, then by date
+        if (a.type === 'urgent' && b.type !== 'urgent') return -1;
+        if (b.type === 'urgent' && a.type !== 'urgent') return 1;
+        return new Date(b.publishedAt || b.createdAt) - new Date(a.publishedAt || a.createdAt);
+      });
+  }
+
+  async createNotice(data, actor) {
+    await this.ensureSeeded();
+    const newNotice = {
+      ...data,
+      authorId: actor._id || actor.id,
+      authorName: actor.name,
+      authorRole: actor.role,
+      isPublished: data.scheduledAt ? false : true,
+      publishedAt: data.scheduledAt ? null : new Date(),
+      readBy: [],
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    if (this.isMongoConnected()) {
+      const doc = await Notice.create(newNotice);
+      return doc.toObject ? doc.toObject() : doc;
+    }
+    newNotice._id = 'ntc_' + Date.now();
+    this.notices.unshift(newNotice);
+    return newNotice;
+  }
+
+  async updateNotice(id, data) {
+    await this.ensureSeeded();
+    if (this.isMongoConnected()) {
+      const doc = await Notice.findByIdAndUpdate(id, { ...data, updatedAt: new Date() }, { new: true });
+      return doc;
+    }
+    const notice = this.notices.find(n => n._id.toString() === id.toString());
+    if (!notice) return null;
+    Object.assign(notice, data, { updatedAt: new Date() });
+    return notice;
+  }
+
+  async deleteNotice(id) {
+    await this.ensureSeeded();
+    if (this.isMongoConnected()) {
+      return await Notice.findByIdAndDelete(id);
+    }
+    const idx = this.notices.findIndex(n => n._id.toString() === id.toString());
+    if (idx === -1) return null;
+    return this.notices.splice(idx, 1)[0];
+  }
+
+  async markNoticeRead(noticeId, userId) {
+    await this.ensureSeeded();
+    if (this.isMongoConnected()) {
+      const notice = await Notice.findById(noticeId);
+      if (!notice) return null;
+      const alreadyRead = notice.readBy.some(r => r.userId?.toString() === userId.toString());
+      if (!alreadyRead) {
+        notice.readBy.push({ userId, readAt: new Date() });
+        await notice.save();
+      }
+      return notice.toObject ? notice.toObject() : notice;
+    }
+    const notice = this.notices.find(n => n._id.toString() === noticeId.toString());
+    if (!notice) return null;
+    const alreadyRead = notice.readBy?.some(r => r.userId?.toString() === userId.toString());
+    if (!alreadyRead) {
+      notice.readBy = notice.readBy || [];
+      notice.readBy.push({ userId, readAt: new Date() });
+    }
+    return notice;
+  }
+
+  // ==========================================
+  // MILESTONE 6: VENDOR DIRECTORY
+  // ==========================================
+
+  async getVendors(societyId, filter = {}) {
+    await this.ensureSeeded();
+    const { category, status, search, isEmergency } = filter;
+    if (this.isMongoConnected()) {
+      const query = { societyId };
+      if (category && category !== 'all') query.category = category;
+      if (status && status !== 'all') query.status = status;
+      if (isEmergency) query.isEmergencyContact = true;
+      if (search) {
+        query.$or = [
+          { name: new RegExp(search, 'i') },
+          { businessName: new RegExp(search, 'i') },
+          { tags: { $elemMatch: { $regex: search, $options: 'i' } } },
+        ];
+      }
+      return await Vendor.find(query).sort({ isEmergencyContact: -1, avgRating: -1, name: 1 });
+    }
+    return this.vendors
+      .filter(v => {
+        if (societyId && v.societyId.toString() !== societyId.toString()) return false;
+        if (category && category !== 'all' && v.category !== category) return false;
+        if (status && status !== 'all' && v.status !== status) return false;
+        if (isEmergency && !v.isEmergencyContact) return false;
+        if (search) {
+          const s = search.toLowerCase();
+          const matchName = v.name?.toLowerCase().includes(s);
+          const matchBiz = v.businessName?.toLowerCase().includes(s);
+          const matchTag = v.tags?.some(t => t.toLowerCase().includes(s));
+          if (!matchName && !matchBiz && !matchTag) return false;
+        }
+        return true;
+      })
+      .sort((a, b) => {
+        if (a.isEmergencyContact && !b.isEmergencyContact) return -1;
+        if (!a.isEmergencyContact && b.isEmergencyContact) return 1;
+        return (b.avgRating || 0) - (a.avgRating || 0);
+      });
+  }
+
+  async createVendor(data, actor) {
+    await this.ensureSeeded();
+    const newVendor = {
+      ...data,
+      ratings: [],
+      avgRating: 0,
+      totalRatings: 0,
+      addedBy: actor.name,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    if (this.isMongoConnected()) {
+      const doc = await Vendor.create(newVendor);
+      return doc.toObject ? doc.toObject() : doc;
+    }
+    newVendor._id = 'vnd_' + Date.now();
+    this.vendors.unshift(newVendor);
+    return newVendor;
+  }
+
+  async updateVendor(id, data) {
+    await this.ensureSeeded();
+    if (this.isMongoConnected()) {
+      const doc = await Vendor.findByIdAndUpdate(id, { ...data, updatedAt: new Date() }, { new: true });
+      return doc;
+    }
+    const vendor = this.vendors.find(v => v._id.toString() === id.toString());
+    if (!vendor) return null;
+    Object.assign(vendor, data, { updatedAt: new Date() });
+    return vendor;
+  }
+
+  async rateVendor(id, ratingData, actor) {
+    await this.ensureSeeded();
+    const rating = {
+      residentId: actor._id || actor.id,
+      flatNumber: actor.flatNumber,
+      score: ratingData.score,
+      review: ratingData.review || '',
+      date: new Date(),
+    };
+
+    if (this.isMongoConnected()) {
+      const vendor = await Vendor.findById(id);
+      if (!vendor) return null;
+      // Replace existing rating from same resident
+      vendor.ratings = vendor.ratings.filter(
+        r => r.residentId?.toString() !== (actor._id || actor.id).toString()
+      );
+      vendor.ratings.push(rating);
+      const total = vendor.ratings.length;
+      const avg = vendor.ratings.reduce((sum, r) => sum + r.score, 0) / total;
+      vendor.avgRating = Math.round(avg * 10) / 10;
+      vendor.totalRatings = total;
+      vendor.updatedAt = new Date();
+      await vendor.save();
+      return vendor.toObject ? vendor.toObject() : vendor;
+    }
+
+    const vendor = this.vendors.find(v => v._id.toString() === id.toString());
+    if (!vendor) return null;
+    vendor.ratings = (vendor.ratings || []).filter(
+      r => r.residentId?.toString() !== (actor._id || actor.id).toString()
+    );
+    vendor.ratings.push(rating);
+    const total = vendor.ratings.length;
+    const avg = vendor.ratings.reduce((sum, r) => sum + r.score, 0) / total;
+    vendor.avgRating = Math.round(avg * 10) / 10;
+    vendor.totalRatings = total;
+    vendor.updatedAt = new Date();
+    return vendor;
   }
 
   // --- Visitor Management & Gate Operations (Milestone 4) ---

@@ -82,7 +82,7 @@ export const initialUsers = [
   {
     "_id": "67a800000000000000000012",
     "societyId": "67a800000000000000000001",
-    "name": "Ramesh Singh",
+    "name": "Ramesh Dada Singh",
     "email": "security@gulmohar.com",
     "password": "password123",
     "phone": "+91 98110 77889",

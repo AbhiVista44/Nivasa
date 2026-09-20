@@ -1,11 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import api from '../../services/api';
 import {
   Wrench,
   QrCode,
   Package,
   CalendarDays,
-  ArrowRight
+  ArrowRight,
+  Loader2
 } from 'lucide-react';
 import { MyFlatHub } from '../../components/resident/MyFlatHub';
 import { ComplaintsPanel } from '../../components/complaints/ComplaintsPanel';
@@ -21,10 +23,42 @@ import { AuditLogViewer } from '../../components/audit/AuditLogViewer';
 export const ResidentDashboard = ({ activeTab, onNavigate }) => {
   const { user, society } = useAuth();
   const [complaintView, setComplaintView] = useState('list'); // 'list' | 'form'
+  const [activeComplaint, setActiveComplaint] = useState(null);
+  const [expectedVisitors, setExpectedVisitors] = useState([]);
+  const [loadingData, setLoadingData] = useState(true);
 
-  if (activeTab === 'home') {
-    return <MyFlatHub />;
-  }
+  useEffect(() => {
+    if (activeTab === 'overview' || !activeTab) {
+      fetchOverviewData();
+    }
+  }, [activeTab]);
+
+  const fetchOverviewData = async () => {
+    setLoadingData(true);
+    try {
+      const [complaintsRes, visitorsRes] = await Promise.allSettled([
+        api.get('/complaints?limit=1&status=active'),
+        api.get('/visitors?status=expected&limit=3'),
+      ]);
+
+      if (complaintsRes.status === 'fulfilled' && complaintsRes.value.data?.success) {
+        const active = (complaintsRes.value.data.complaints || []).find(
+          c => !['Closed', 'Resident Confirmed'].includes(c.status)
+        );
+        setActiveComplaint(active || null);
+      }
+
+      if (visitorsRes.status === 'fulfilled' && visitorsRes.value.data?.success) {
+        setExpectedVisitors(visitorsRes.value.data.visitors || []);
+      }
+    } catch (err) {
+      console.warn('Overview data fetch error:', err.message);
+    } finally {
+      setLoadingData(false);
+    }
+  };
+
+  if (activeTab === 'home') return <MyFlatHub />;
 
   if (activeTab === 'complaints') {
     if (complaintView === 'form') {
@@ -35,36 +69,15 @@ export const ResidentDashboard = ({ activeTab, onNavigate }) => {
         />
       );
     }
-    return (
-      <ComplaintsPanel
-        onRaiseNew={() => setComplaintView('form')}
-      />
-    );
+    return <ComplaintsPanel onRaiseNew={() => setComplaintView('form')} />;
   }
 
-  if (activeTab === 'visitors') {
-    return <ResidentVisitorsPanel />;
-  }
-
-  if (activeTab === 'deliveries') {
-    return <DeliveriesPanel />;
-  }
-
-  if (activeTab === 'facilities') {
-    return <FacilityBookingHub />;
-  }
-
-  if (activeTab === 'notices') {
-    return <NoticeBoardHub />;
-  }
-
-  if (activeTab === 'vendors') {
-    return <VendorDirectoryHub />;
-  }
-
-  if (activeTab === 'history') {
-    return <AuditLogViewer />;
-  }
+  if (activeTab === 'visitors') return <ResidentVisitorsPanel />;
+  if (activeTab === 'deliveries') return <DeliveriesPanel />;
+  if (activeTab === 'facilities') return <FacilityBookingHub />;
+  if (activeTab === 'notices') return <NoticeBoardHub />;
+  if (activeTab === 'vendors') return <VendorDirectoryHub />;
+  if (activeTab === 'history') return <AuditLogViewer />;
 
   const quickActions = [
     {
@@ -96,9 +109,9 @@ export const ResidentDashboard = ({ activeTab, onNavigate }) => {
     },
     {
       title: 'Delivery Pickup Desk',
-      desc: '1 parcel waiting at Main Gate Post 1',
+      desc: 'Check and collect your pending deliveries',
       icon: Package,
-      aiBadge: '1 Arrived',
+      aiBadge: 'Gate Log',
       badgeColor: 'bg-emerald-100 text-emerald-800',
       action: () => onNavigate?.('deliveries'),
       accent: 'border-emerald-200 hover:border-emerald-400 bg-emerald-50/20',
@@ -107,7 +120,7 @@ export const ResidentDashboard = ({ activeTab, onNavigate }) => {
 
   return (
     <div className="space-y-6">
-      
+
       {/* Real-Time Gate Approvals Alert */}
       <ResidentApprovalsBanner />
 
@@ -123,10 +136,17 @@ export const ResidentDashboard = ({ activeTab, onNavigate }) => {
             </span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-bold font-display tracking-tight">
-            Welcome home, {user?.name?.split(' ')[0] || 'Rahul'}
+            Welcome home, {user?.name?.split(' ')[0] || 'Resident'}
           </h1>
           <p className="text-xs text-teal-100/80">
-            Residence: <strong className="text-amber-300 font-mono text-sm">{user?.flatNumber || 'B-402'}</strong> • {user?.wing || 'Wing B'} • Status: <strong className="text-emerald-300 font-medium">Active Resident (Owner)</strong>
+            Residence:{' '}
+            <strong className="text-amber-300 font-mono text-sm">
+              {user?.flatNumber || '—'}
+            </strong>
+            {user?.wing ? ` • ${user.wing}` : ''} • Status:{' '}
+            <strong className="text-emerald-300 font-medium">
+              {user?.isOwner ? 'Active Resident (Owner)' : 'Active Resident'}
+            </strong>
           </p>
         </div>
 
@@ -178,7 +198,7 @@ export const ResidentDashboard = ({ activeTab, onNavigate }) => {
 
       {/* Live Activity & Complaint Status Tracker */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
+
         {/* Active Complaint 9-Step Lifecycle Preview */}
         <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-200 p-5 shadow-xs">
           <div className="flex items-center justify-between mb-4">
@@ -187,42 +207,76 @@ export const ResidentDashboard = ({ activeTab, onNavigate }) => {
                 Active Maintenance Workflow
               </span>
               <h2 className="text-base font-bold text-slate-900 font-display">
-                CMP-104: Water leakage from bathroom ceiling
+                {activeComplaint ? activeComplaint.complaintNumber + ': ' + activeComplaint.title : 'No Active Request'}
               </h2>
             </div>
-            <span className="text-xs font-bold px-2.5 py-1 rounded-lg bg-teal-100 text-teal-800">
-              Stage: In Progress
-            </span>
+            {activeComplaint && (
+              <span className="text-xs font-bold px-2.5 py-1 rounded-lg bg-teal-100 text-teal-800">
+                Stage: {activeComplaint.status}
+              </span>
+            )}
           </div>
 
-          {/* Stepper Preview */}
-          <div className="py-2">
-            <div className="flex items-center justify-between text-[11px] font-semibold text-slate-600 mb-2">
-              <span className="text-emerald-700 font-bold">1. Created</span>
-              <span className="text-emerald-700 font-bold">2. Reviewed</span>
-              <span className="text-emerald-700 font-bold">3. Assigned</span>
-              <span className="text-teal-700 font-bold">4. Scheduled</span>
-              <span className="text-amber-700 font-extrabold ring-2 ring-amber-400 bg-amber-50 px-1.5 py-0.5 rounded">5. In Progress</span>
-              <span className="text-slate-400">6. Completed</span>
-              <span className="text-slate-400">7. Confirmed</span>
+          {loadingData ? (
+            <div className="flex items-center justify-center py-10 text-slate-400">
+              <Loader2 className="w-5 h-5 animate-spin mr-2" />
+              <span className="text-sm">Loading...</span>
             </div>
-            <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
-              <div className="bg-gradient-to-r from-teal-600 to-amber-500 h-full w-[65%]" />
+          ) : activeComplaint ? (
+            <>
+              <div className="py-2">
+                <div className="flex items-center justify-between text-[11px] font-semibold text-slate-600 mb-2 flex-wrap gap-1">
+                  {['Created','Under Review','Assigned','Scheduled','In Progress','Completed','Closed'].map((stage, i) => {
+                    const stages = ['Created','Under Review','Assigned','Scheduled','In Progress','Completed','Resident Confirmed','Closed'];
+                    const currentIdx = stages.indexOf(activeComplaint.status);
+                    const thisIdx = stages.indexOf(stage);
+                    const done = thisIdx < currentIdx;
+                    const active = thisIdx === currentIdx;
+                    return (
+                      <span key={stage} className={
+                        active ? 'text-amber-700 font-extrabold ring-2 ring-amber-400 bg-amber-50 px-1.5 py-0.5 rounded' :
+                        done ? 'text-emerald-700 font-bold' : 'text-slate-400'
+                      }>
+                        {i + 1}. {stage}
+                      </span>
+                    );
+                  })}
+                </div>
+                <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                  <div className="bg-gradient-to-r from-teal-600 to-amber-500 h-full" style={{
+                    width: `${Math.min(100, (['Created','Under Review','Assigned','Scheduled','In Progress','Completed','Resident Confirmed','Closed'].indexOf(activeComplaint.status) + 1) / 8 * 100)}%`
+                  }} />
+                </div>
+              </div>
+              <div className="mt-4 p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs flex items-center justify-between">
+                <div>
+                  {activeComplaint.assignedVendor && (
+                    <p className="font-semibold text-slate-800">
+                      Assigned Vendor: {activeComplaint.assignedVendor.vendorName}
+                      {activeComplaint.assignedVendor.businessName ? ` (${activeComplaint.assignedVendor.businessName})` : ''}
+                    </p>
+                  )}
+                  <p className="text-slate-500 text-[11px]">
+                    {activeComplaint.scheduledVisit?.visitDate
+                      ? `Visit: ${activeComplaint.scheduledVisit.visitDate} • ${activeComplaint.scheduledVisit.timeSlot}`
+                      : 'No visit scheduled yet'}
+                  </p>
+                </div>
+                <button
+                  onClick={() => onNavigate?.('complaints')}
+                  className="px-3 py-1.5 bg-teal-700 hover:bg-teal-800 text-white font-semibold rounded-lg text-xs transition cursor-pointer"
+                >
+                  View Details
+                </button>
+              </div>
+            </>
+          ) : (
+            <div className="text-center py-10 text-slate-400">
+              <Wrench className="w-8 h-8 mx-auto mb-2 opacity-40" />
+              <p className="text-sm font-medium">No active maintenance requests</p>
+              <p className="text-xs mt-1">Use the quick action above to raise a new complaint.</p>
             </div>
-          </div>
-
-          <div className="mt-4 p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs flex items-center justify-between">
-            <div>
-              <p className="font-semibold text-slate-800">Assigned Vendor: Sunil Kumar (Apex Plumbing)</p>
-              <p className="text-slate-500 text-[11px]">Visit Scheduled: Today at 4:30 PM • ETA 25 mins</p>
-            </div>
-            <button
-              onClick={() => onNavigate?.('complaints')}
-              className="px-3 py-1.5 bg-teal-700 hover:bg-teal-800 text-white font-semibold rounded-lg text-xs transition cursor-pointer"
-            >
-              View Work Notes
-            </button>
-          </div>
+          )}
         </div>
 
         {/* Expected Visitors & Gate Passes */}
@@ -239,30 +293,36 @@ export const ResidentDashboard = ({ activeTab, onNavigate }) => {
             </button>
           </div>
 
-          <div className="space-y-3">
-            <div className="p-3 rounded-xl border border-amber-200 bg-amber-50/40 text-xs">
-              <div className="flex items-center justify-between">
-                <span className="font-bold text-slate-800">Dr. Rajesh Kulkarni</span>
-                <span className="font-mono font-bold text-amber-900 bg-amber-100 px-2 py-0.5 rounded">
-                  #718902
-                </span>
-              </div>
-              <p className="text-[11px] text-slate-600 mt-1">Expected Today: 6:00 PM • Guest Entry</p>
-              <div className="flex items-center gap-1.5 mt-2 text-[10px] text-teal-800 font-semibold">
-                <QrCode className="w-3.5 h-3.5" /> QR Passcode Active
-              </div>
+          {loadingData ? (
+            <div className="flex items-center justify-center py-8 text-slate-400">
+              <Loader2 className="w-4 h-4 animate-spin" />
             </div>
-
-            <div className="p-3 rounded-xl border border-slate-200 bg-slate-50 text-xs">
-              <div className="flex items-center justify-between">
-                <span className="font-bold text-slate-700">Amazon Delivery Agent</span>
-                <span className="font-mono text-emerald-800 bg-emerald-100 text-[10px] px-1.5 py-0.5 rounded font-bold">
-                  Arrived at Gate
-                </span>
-              </div>
-              <p className="text-[11px] text-slate-500 mt-1">Order #88391 • Package held at Gate Post 1</p>
+          ) : expectedVisitors.length === 0 ? (
+            <div className="text-center py-8 text-slate-400">
+              <QrCode className="w-7 h-7 mx-auto mb-2 opacity-40" />
+              <p className="text-sm font-medium">No expected visitors</p>
+              <p className="text-xs mt-1">Pre-authorize visitors to generate gate passes.</p>
             </div>
-          </div>
+          ) : (
+            <div className="space-y-3">
+              {expectedVisitors.map((v) => (
+                <div key={v._id} className="p-3 rounded-xl border border-amber-200 bg-amber-50/40 text-xs">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-slate-800">{v.name || v.visitorName}</span>
+                    <span className="font-mono font-bold text-amber-900 bg-amber-100 px-2 py-0.5 rounded">
+                      #{v.passcode || v.code}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-600 mt-1">
+                    {v.expectedTime ? `Expected: ${new Date(v.expectedTime).toLocaleString()}` : 'Anytime'} • {v.purpose || 'Guest Entry'}
+                  </p>
+                  <div className="flex items-center gap-1.5 mt-2 text-[10px] text-teal-800 font-semibold">
+                    <QrCode className="w-3.5 h-3.5" /> QR Passcode Active
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
       </div>

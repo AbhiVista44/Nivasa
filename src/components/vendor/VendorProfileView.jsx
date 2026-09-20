@@ -8,9 +8,9 @@ import {
 
 export const VendorProfileView = () => {
   const { user, society } = useAuth();
-  const [businessName, setBusinessName] = useState(user?.businessName || 'Apex Plumbing & Sanitation Services');
-  const [category, setCategory] = useState(user?.serviceCategory || 'Plumbing');
-  const [phone, setPhone] = useState(user?.phone || '+91 98901 33445');
+  const [businessName, setBusinessName] = useState(user?.businessName || '');
+  const [category, setCategory] = useState(user?.serviceCategory || '');
+  const [phone, setPhone] = useState(user?.phone || '');
   const [hours, setHours] = useState('08:00 AM - 08:00 PM (Emergency 24/7)');
   const [saved, setSaved] = useState(false);
 

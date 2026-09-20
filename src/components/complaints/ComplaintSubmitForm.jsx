@@ -210,17 +210,7 @@ export const ComplaintSubmitForm = ({ onBack, onSuccess }) => {
         setError(res.data.message || 'Submission failed.');
       }
     } catch (err) {
-      // Demo/offline fallback – mock success
-      const mockComplaint = {
-        complaintNumber: `CMP-${String(Date.now()).slice(-3)}`,
-        title: title.trim(),
-        category: category || aiResult?.category || 'General',
-        priority: priority || 'Medium',
-        status: 'Created',
-        createdAt: new Date().toISOString(),
-      };
-      setSubmitResult(mockComplaint);
-      setSubmitted(true);
+      setError(err?.response?.data?.message || 'Failed to submit complaint. Please check your connection and try again.');
     } finally {
       setSubmitting(false);
     }

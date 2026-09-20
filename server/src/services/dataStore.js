@@ -254,6 +254,441 @@ class DataStore {
     return flat;
   }
 
+  async registerSociety(data) {
+    await this.ensureSeeded();
+    const {
+      societyName,
+      societyCode,
+      city,
+      address,
+      pincode,
+      adminName,
+      adminEmail,
+      adminPhone,
+      adminPassword,
+    } = data;
+
+    if (this.isMongoConnected()) {
+      const existingSociety = await Society.findOne({ code: societyCode.toUpperCase() });
+      if (existingSociety) {
+        throw new Error(`Society code "${societyCode.toUpperCase()}" is already registered.`);
+      }
+      const existingUser = await User.findOne({ email: adminEmail.toLowerCase() });
+      if (existingUser) {
+        throw new Error(`Email "${adminEmail}" is already registered.`);
+      }
+
+      const society = await Society.create({
+        name: societyName,
+        code: societyCode.toUpperCase(),
+        city,
+        address,
+        pincode: pincode || '000000',
+        wings: [],
+        totalFlats: 0,
+        status: 'active',
+      });
+
+      const adminUser = await User.create({
+        societyId: society._id,
+        name: adminName,
+        email: adminEmail.toLowerCase(),
+        password: adminPassword,
+        phone: adminPhone,
+        role: 'admin',
+        status: 'active',
+      });
+
+      const { password: _p, ...safeAdmin } = adminUser.toObject();
+      return { society, user: safeAdmin };
+    }
+
+    // In-memory mode
+    const existingSociety = this.societies.find(s => s.code.toUpperCase() === societyCode.toUpperCase());
+    if (existingSociety) {
+      throw new Error(`Society code "${societyCode.toUpperCase()}" is already registered.`);
+    }
+    const existingUser = this.users.find(u => u.email.toLowerCase() === adminEmail.toLowerCase());
+    if (existingUser) {
+      throw new Error(`Email "${adminEmail}" is already registered.`);
+    }
+
+    const societyId = new mongoose.Types.ObjectId();
+    const newSociety = {
+      _id: societyId,
+      name: societyName,
+      code: societyCode.toUpperCase(),
+      city,
+      address,
+      pincode: pincode || '000000',
+      wings: [],
+      totalFlats: 0,
+      status: 'active',
+      createdAt: new Date(),
+    };
+    this.societies.push(newSociety);
+
+    const adminId = new mongoose.Types.ObjectId();
+    const passwordHash = bcrypt.hashSync(adminPassword, 10);
+    const newAdmin = {
+      _id: adminId,
+      societyId,
+      name: adminName,
+      email: adminEmail.toLowerCase(),
+      password: adminPassword,
+      passwordHash,
+      phone: adminPhone,
+      role: 'admin',
+      status: 'active',
+      createdAt: new Date(),
+    };
+    this.users.push(newAdmin);
+
+    const { password: _p, passwordHash: _ph, ...safeAdmin } = newAdmin;
+    return { society: newSociety, user: safeAdmin };
+  }
+
+  async addWing(societyId, wingData) {
+    await this.ensureSeeded();
+    const wing = {
+      name: wingData.name,
+      totalFloors: Number(wingData.totalFloors) || 1,
+      flatsPerFloor: Number(wingData.flatsPerFloor) || 1,
+    };
+
+    if (this.isMongoConnected()) {
+      const society = await Society.findById(societyId);
+      if (!society) throw new Error('Society not found.');
+      society.wings = society.wings || [];
+      society.wings.push(wing);
+      await society.save();
+      return society;
+    }
+
+    const society = this.societies.find(s => s._id.toString() === societyId.toString());
+    if (!society) throw new Error('Society not found.');
+    society.wings = society.wings || [];
+    society.wings.push(wing);
+    return society;
+  }
+
+  async createFlat(societyId, flatData) {
+    await this.ensureSeeded();
+    const {
+      wing,
+      flatNumber,
+      floor,
+      type = '3 BHK',
+      areaSqFt = 1200,
+      allocatedParkingSlot = '',
+      intercomNumber = '',
+      ownerName,
+      ownerEmail,
+      ownerPhone,
+      ownerPassword,
+    } = flatData;
+
+    const normalizedFlatNo = flatNumber.toUpperCase().trim();
+
+    if (this.isMongoConnected()) {
+      const existing = await Flat.findOne({ societyId, flatNumber: normalizedFlatNo });
+      if (existing) {
+        throw new Error(`Flat ${normalizedFlatNo} already exists in this society.`);
+      }
+
+      let primaryResident = null;
+      if (ownerEmail && ownerName) {
+        let user = await User.findOne({ email: ownerEmail.toLowerCase() });
+        if (!user) {
+          user = await User.create({
+            societyId,
+            name: ownerName,
+            email: ownerEmail.toLowerCase(),
+            password: ownerPassword || 'resident123',
+            phone: ownerPhone || '',
+            role: 'resident',
+            wing,
+            flatNumber: normalizedFlatNo,
+            isOwner: true,
+            status: 'active',
+          });
+        } else {
+          user.flatNumber = normalizedFlatNo;
+          user.wing = wing;
+          user.societyId = societyId;
+          await user.save();
+        }
+
+        primaryResident = {
+          name: ownerName,
+          email: ownerEmail.toLowerCase(),
+          phone: ownerPhone || '',
+          userId: user._id,
+        };
+      }
+
+      const flat = await Flat.create({
+        societyId,
+        wing,
+        flatNumber: normalizedFlatNo,
+        floor: Number(floor) || 1,
+        type,
+        areaSqFt: Number(areaSqFt) || 1200,
+        status: primaryResident ? 'occupied' : 'vacant',
+        occupancyType: primaryResident ? 'owner' : 'vacant',
+        allocatedParkingSlot,
+        intercomNumber,
+        primaryResident,
+        familyMembers: [],
+        vehicles: [],
+      });
+
+      await Society.findByIdAndUpdate(societyId, { $inc: { totalFlats: 1 } });
+      return flat;
+    }
+
+    // In-memory mode
+    const existing = this.flats.find(f => f.societyId.toString() === societyId.toString() && f.flatNumber === normalizedFlatNo);
+    if (existing) {
+      throw new Error(`Flat ${normalizedFlatNo} already exists in this society.`);
+    }
+
+    let primaryResident = null;
+    if (ownerEmail && ownerName) {
+      let user = this.users.find(u => u.email.toLowerCase() === ownerEmail.toLowerCase());
+      if (!user) {
+        const userId = new mongoose.Types.ObjectId();
+        const pwd = ownerPassword || 'resident123';
+        user = {
+          _id: userId,
+          societyId,
+          name: ownerName,
+          email: ownerEmail.toLowerCase(),
+          password: pwd,
+          passwordHash: bcrypt.hashSync(pwd, 10),
+          phone: ownerPhone || '',
+          role: 'resident',
+          wing,
+          flatNumber: normalizedFlatNo,
+          isOwner: true,
+          status: 'active',
+          createdAt: new Date(),
+        };
+        this.users.push(user);
+      } else {
+        user.flatNumber = normalizedFlatNo;
+        user.wing = wing;
+        user.societyId = societyId;
+      }
+
+      primaryResident = {
+        name: ownerName,
+        email: ownerEmail.toLowerCase(),
+        phone: ownerPhone || '',
+        userId: user._id,
+      };
+    }
+
+    const flat = {
+      _id: new mongoose.Types.ObjectId(),
+      societyId,
+      wing,
+      flatNumber: normalizedFlatNo,
+      floor: Number(floor) || 1,
+      type,
+      areaSqFt: Number(areaSqFt) || 1200,
+      status: primaryResident ? 'occupied' : 'vacant',
+      occupancyType: primaryResident ? 'owner' : 'vacant',
+      allocatedParkingSlot,
+      intercomNumber,
+      primaryResident,
+      familyMembers: [],
+      vehicles: [],
+      createdAt: new Date(),
+    };
+
+    this.flats.push(flat);
+    const soc = this.societies.find(s => s._id.toString() === societyId.toString());
+    if (soc) soc.totalFlats = (soc.totalFlats || 0) + 1;
+
+    return flat;
+  }
+
+  async assignFlatOwner(societyId, flatId, ownerData) {
+    await this.ensureSeeded();
+    const { ownerName, ownerEmail, ownerPhone, ownerPassword } = ownerData;
+    if (!ownerName || !ownerEmail) {
+      throw new Error('Owner name and email are required.');
+    }
+
+    if (this.isMongoConnected()) {
+      const flat = await Flat.findById(flatId);
+      if (!flat) throw new Error('Flat not found.');
+
+      let user = await User.findOne({ email: ownerEmail.toLowerCase() });
+      if (!user) {
+        user = await User.create({
+          societyId,
+          name: ownerName,
+          email: ownerEmail.toLowerCase(),
+          password: ownerPassword || 'resident123',
+          phone: ownerPhone || '',
+          role: 'resident',
+          wing: flat.wing,
+          flatNumber: flat.flatNumber,
+          isOwner: true,
+          status: 'active',
+        });
+      } else {
+        user.flatNumber = flat.flatNumber;
+        user.wing = flat.wing;
+        user.role = 'resident';
+        user.societyId = societyId;
+        await user.save();
+      }
+
+      flat.primaryResident = {
+        name: ownerName,
+        email: ownerEmail.toLowerCase(),
+        phone: ownerPhone || '',
+        userId: user._id,
+      };
+      flat.status = 'occupied';
+      flat.occupancyType = 'owner';
+      await flat.save();
+      return flat;
+    }
+
+    // In-memory mode
+    const flat = this.flats.find(f => f._id.toString() === flatId.toString());
+    if (!flat) throw new Error('Flat not found.');
+
+    let user = this.users.find(u => u.email.toLowerCase() === ownerEmail.toLowerCase());
+    if (!user) {
+      const userId = new mongoose.Types.ObjectId();
+      const pwd = ownerPassword || 'resident123';
+      user = {
+        _id: userId,
+        societyId,
+        name: ownerName,
+        email: ownerEmail.toLowerCase(),
+        password: pwd,
+        passwordHash: bcrypt.hashSync(pwd, 10),
+        phone: ownerPhone || '',
+        role: 'resident',
+        wing: flat.wing,
+        flatNumber: flat.flatNumber,
+        isOwner: true,
+        status: 'active',
+        createdAt: new Date(),
+      };
+      this.users.push(user);
+    } else {
+      user.flatNumber = flat.flatNumber;
+      user.wing = flat.wing;
+      user.role = 'resident';
+      user.societyId = societyId;
+    }
+
+    flat.primaryResident = {
+      name: ownerName,
+      email: ownerEmail.toLowerCase(),
+      phone: ownerPhone || '',
+      userId: user._id,
+    };
+    flat.status = 'occupied';
+    flat.occupancyType = 'owner';
+    return flat;
+  }
+
+  async createStaffUser(societyId, staffData) {
+    await this.ensureSeeded();
+    const { name, email, password, phone, role, gatePost, badgeNumber, businessName, serviceCategory } = staffData;
+    if (!name || !email || !password || !role) {
+      throw new Error('Name, email, password and role are required.');
+    }
+
+    if (this.isMongoConnected()) {
+      const existing = await User.findOne({ email: email.toLowerCase() });
+      if (existing) {
+        throw new Error(`User with email "${email}" already exists.`);
+      }
+
+      const user = await User.create({
+        societyId,
+        name,
+        email: email.toLowerCase(),
+        password,
+        phone: phone || '',
+        role,
+        gatePost: gatePost || 'Main Gate',
+        badgeNumber: badgeNumber || '',
+        businessName: businessName || '',
+        serviceCategory: serviceCategory || '',
+        status: 'active',
+      });
+
+      if (role === 'vendor') {
+        await Vendor.create({
+          societyId,
+          name,
+          businessName: businessName || name,
+          category: serviceCategory || 'Other',
+          phone: phone || '',
+          status: 'active',
+          rating: 5.0,
+          ratingsCount: 0,
+        });
+      }
+
+      const { password: _p, ...safeUser } = user.toObject();
+      return safeUser;
+    }
+
+    // In-memory
+    const existing = this.users.find(u => u.email.toLowerCase() === email.toLowerCase());
+    if (existing) {
+      throw new Error(`User with email "${email}" already exists.`);
+    }
+
+    const userId = new mongoose.Types.ObjectId();
+    const newUser = {
+      _id: userId,
+      societyId,
+      name,
+      email: email.toLowerCase(),
+      password,
+      passwordHash: bcrypt.hashSync(password, 10),
+      phone: phone || '',
+      role,
+      gatePost: gatePost || 'Main Gate',
+      badgeNumber: badgeNumber || '',
+      businessName: businessName || '',
+      serviceCategory: serviceCategory || '',
+      status: 'active',
+      createdAt: new Date(),
+    };
+    this.users.push(newUser);
+
+    if (role === 'vendor') {
+      this.vendors.push({
+        _id: new mongoose.Types.ObjectId(),
+        societyId,
+        name,
+        businessName: businessName || name,
+        category: serviceCategory || 'Other',
+        phone: phone || '',
+        status: 'active',
+        rating: 5.0,
+        ratingsCount: 0,
+        createdAt: new Date(),
+      });
+    }
+
+    const { password: _p, passwordHash: _ph, ...safeUser } = newUser;
+    return safeUser;
+  }
+
   // --- Complaint Management (Milestone 3) ---
   async getComplaints(societyId, query = {}) {
     await this.ensureSeeded();

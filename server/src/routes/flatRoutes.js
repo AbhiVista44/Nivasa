@@ -49,6 +49,113 @@ router.get('/:id', verifyToken, async (req, res) => {
   }
 });
 
+// Admin endpoint: Create new flat (and optionally provision owner)
+router.post('/', verifyToken, requireRoles('admin'), async (req, res) => {
+  try {
+    const societyId = req.headers['x-society-id'] || req.user.societyId;
+    const {
+      wing,
+      flatNumber,
+      floor,
+      type,
+      areaSqFt,
+      allocatedParkingSlot,
+      intercomNumber,
+      ownerName,
+      ownerEmail,
+      ownerPhone,
+      ownerPassword,
+    } = req.body;
+
+    if (!wing || !flatNumber || floor === undefined) {
+      return res.status(400).json({
+        success: false,
+        message: 'Wing, flat number, and floor are required.',
+      });
+    }
+
+    const flat = await dataStore.createFlat(societyId, {
+      wing,
+      flatNumber,
+      floor,
+      type,
+      areaSqFt,
+      allocatedParkingSlot,
+      intercomNumber,
+      ownerName,
+      ownerEmail,
+      ownerPhone,
+      ownerPassword,
+    });
+
+    await dataStore.logAction({
+      societyId,
+      actorId: req.user._id,
+      actorName: req.user.name,
+      actorRole: req.user.role,
+      action: 'FLAT_CREATED',
+      targetType: 'Flat',
+      targetId: flat.flatNumber,
+      details: {
+        wing,
+        flatNumber: flat.flatNumber,
+        ownerAssigned: !!(ownerEmail && ownerName),
+      },
+    });
+
+    res.status(201).json({
+      success: true,
+      message: `Flat ${flat.flatNumber} created successfully.`,
+      flat,
+    });
+  } catch (error) {
+    console.error('Create flat error:', error);
+    res.status(400).json({ success: false, message: error.message || 'Failed to create flat.' });
+  }
+});
+
+// Admin endpoint: Assign/Invite owner to an existing flat
+router.post('/:id/assign-owner', verifyToken, requireRoles('admin'), async (req, res) => {
+  try {
+    const societyId = req.headers['x-society-id'] || req.user.societyId;
+    const { ownerName, ownerEmail, ownerPhone, ownerPassword } = req.body;
+
+    if (!ownerName || !ownerEmail) {
+      return res.status(400).json({
+        success: false,
+        message: 'Owner name and email are required.',
+      });
+    }
+
+    const flat = await dataStore.assignFlatOwner(societyId, req.params.id, {
+      ownerName,
+      ownerEmail,
+      ownerPhone,
+      ownerPassword,
+    });
+
+    await dataStore.logAction({
+      societyId,
+      actorId: req.user._id,
+      actorName: req.user.name,
+      actorRole: req.user.role,
+      action: 'FLAT_OWNER_ASSIGNED',
+      targetType: 'Flat',
+      targetId: flat.flatNumber,
+      details: { flatNumber: flat.flatNumber, ownerName, ownerEmail },
+    });
+
+    res.json({
+      success: true,
+      message: `Owner ${ownerName} assigned to Flat ${flat.flatNumber} successfully.`,
+      flat,
+    });
+  } catch (error) {
+    console.error('Assign owner error:', error);
+    res.status(400).json({ success: false, message: error.message || 'Failed to assign owner.' });
+  }
+});
+
 // Resident endpoint: Add family member to their flat
 router.post('/family', verifyToken, async (req, res) => {
   try {

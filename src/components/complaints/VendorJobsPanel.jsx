@@ -43,44 +43,7 @@ const TIME_SLOTS = [
   'Weekends only',
 ];
 
-// Demo data for vendor offline mode
-const DEMO_VENDOR_JOBS = [
-  {
-    _id: 'vj-1', complaintNumber: 'CMP-104', flatNumber: 'B-402', wing: 'Wing B',
-    residentName: 'Rahul Verma', residentPhone: '+91 98221 44556',
-    title: 'Water leakage from bathroom ceiling', category: 'Plumbing', priority: 'High',
-    status: 'In Progress', preferredVisitTime: 'Morning (9 AM – 12 PM)',
-    description: 'Water is leaking from the ceiling above the bathroom. Started 2 days ago.',
-    scheduledVisit: { visitDate: new Date().toISOString().split('T')[0], timeSlot: 'Afternoon (12 PM – 4 PM)' },
-    aiClassification: { isAiAssisted: true, suggestedCategory: 'Plumbing', suggestedPriority: 'High', confidence: 0.96, source: 'groq-ai', summary: 'Water leakage from bathroom ceiling.' },
-    timeline: [
-      { status: 'Assigned', actor: 'Priya Sharma (Admin)', note: 'Assigned to Apex Plumbing.', at: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString() },
-      { status: 'In Progress', actor: 'Sunil Kumar (Vendor)', note: 'Arrived at flat. Inspection underway.', at: new Date(Date.now() - 1000 * 60 * 25).toISOString() },
-    ],
-  },
-  {
-    _id: 'vj-2', complaintNumber: 'CMP-101', flatNumber: 'D-509', wing: 'Wing D',
-    residentName: 'Vikram Patil', residentPhone: '+91 96001 88990',
-    title: 'Bathroom faucet dripping', category: 'Plumbing', priority: 'Low',
-    status: 'Assigned', preferredVisitTime: 'Afternoon (12 PM – 4 PM)',
-    description: 'The bathroom faucet has been dripping slowly and needs replacement.',
-    aiClassification: { isAiAssisted: true, suggestedCategory: 'Plumbing', suggestedPriority: 'Low', confidence: 0.88, source: 'smart-heuristic', summary: 'Bathroom faucet dripping, requires replacement.' },
-    timeline: [
-      { status: 'Assigned', actor: 'Priya Sharma (Admin)', note: 'Assigned to Apex Plumbing.', at: new Date(Date.now() - 1000 * 60 * 60 * 1).toISOString() },
-    ],
-  },
-  {
-    _id: 'vj-3', complaintNumber: 'CMP-098', flatNumber: 'A-201', wing: 'Wing A',
-    residentName: 'Neha Joshi', residentPhone: '+91 97001 22334',
-    title: 'Kitchen sink drain clogged', category: 'Plumbing', priority: 'Medium',
-    status: 'Completed', preferredVisitTime: 'Evening (4 PM – 7 PM)',
-    description: 'Kitchen sink drain is completely blocked.',
-    rating: 5, residentFeedback: 'Excellent work, very prompt!',
-    timeline: [
-      { status: 'Completed', actor: 'Sunil Kumar (Vendor)', note: 'Drain cleared using drain snake.', at: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString() },
-    ],
-  },
-];
+// No demo data — production mode only
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Vendor Job Detail
@@ -320,13 +283,13 @@ export const VendorJobsPanel = () => {
     setLoading(true);
     try {
       const res = await api.get('/complaints');
-      if (res.data.success && res.data.complaints.length > 0) {
+      if (res.data.success) {
         setJobs(res.data.complaints);
       } else {
-        setJobs(DEMO_VENDOR_JOBS);
+        setJobs([]);
       }
     } catch {
-      setJobs(DEMO_VENDOR_JOBS);
+      setJobs([]);
     } finally {
       setLoading(false);
     }
@@ -355,7 +318,7 @@ export const VendorJobsPanel = () => {
         <div>
           <h1 className="text-xl font-bold font-display text-slate-900">My Assigned Jobs</h1>
           <p className="text-xs text-slate-500 mt-0.5">
-            {user?.businessName || 'Apex Plumbing'} • {user?.serviceCategory || 'Plumbing'}
+            {user?.businessName || user?.name || 'Vendor Services'}{user?.serviceCategory ? ` • ${user.serviceCategory}` : ''}
           </p>
         </div>
         <div className="flex items-center gap-2 bg-teal-50 border border-teal-200 px-3 py-2 rounded-xl">

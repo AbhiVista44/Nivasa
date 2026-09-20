@@ -21,7 +21,8 @@ export const MyFlatHub = () => {
 
   const fetchFlatDetails = useCallback(async () => {
     try {
-      const flatNo = user?.flatNumber || 'B-402';
+    const flatNo = user?.flatNumber;
+      if (!flatNo) return;
       const res = await api.get(`/flats/lookup/${flatNo}`);
       if (res.data.success) {
         setFlatData(res.data.flat);
@@ -102,10 +103,10 @@ export const MyFlatHub = () => {
           <div className="space-y-2">
             <div className="flex items-center gap-2.5">
               <span className="bg-amber-400 text-slate-950 font-mono font-extrabold text-sm px-3 py-1 rounded-xl shadow-xs">
-                Unit {flatData?.flatNumber || user?.flatNumber || 'B-402'}
+                Unit {flatData?.flatNumber || user?.flatNumber || '—'}
               </span>
               <span className="text-xs bg-teal-950/80 text-teal-200 px-3 py-1 rounded-xl border border-teal-700">
-                {flatData?.wing || 'Wing B (Sapphire)'}
+                {flatData?.wing || user?.wing || '—'}
               </span>
               <span className="text-xs bg-emerald-500/20 text-emerald-300 px-2.5 py-1 rounded-xl uppercase font-bold tracking-wider">
                 {flatData?.occupancyType || 'Owner'}
@@ -113,26 +114,26 @@ export const MyFlatHub = () => {
             </div>
 
             <h1 className="text-2xl sm:text-3xl font-extrabold font-display tracking-tight">
-              {society?.name || 'Gulmohar Greens Heights'}
+              {society?.name || 'Nivasa Community'}
             </h1>
 
             <p className="text-xs text-teal-100/90 max-w-xl">
-              Floor {flatData?.floor || 4} • {flatData?.type || '3 BHK'} • {flatData?.areaSqFt || 1580} sq.ft carpet area • Sector 18, Kharadi
+              Floor {flatData?.floor || '—'} • {flatData?.type || '—'} • {flatData?.areaSqFt ? `${flatData.areaSqFt} sq.ft carpet area` : 'Area not specified'}
             </p>
           </div>
 
           <div className="bg-slate-900/80 backdrop-blur-md p-4 rounded-2xl border border-teal-600/50 space-y-2 shrink-0 text-xs">
             <div className="flex items-center justify-between gap-4">
               <span className="text-slate-400">Allocated Parking:</span>
-              <span className="font-mono font-bold text-amber-300">{flatData?.allocatedParkingSlot || 'P-114 (Basement 1)'}</span>
+              <span className="font-mono font-bold text-amber-300">{flatData?.allocatedParkingSlot || '—'}</span>
             </div>
             <div className="flex items-center justify-between gap-4">
               <span className="text-slate-400">Intercom Ext:</span>
-              <span className="font-mono font-bold text-white">{flatData?.intercomNumber || '2402'}</span>
+              <span className="font-mono font-bold text-white">{flatData?.intercomNumber || '—'}</span>
             </div>
             <div className="flex items-center justify-between gap-4">
               <span className="text-slate-400">Gate Pass Code:</span>
-              <span className="font-mono font-bold text-emerald-400">Active (#718902)</span>
+              <span className="font-mono font-bold text-emerald-400">{flatData?.gatePassCode ? `Active (#${flatData.gatePassCode})` : '—'}</span>
             </div>
           </div>
         </div>

@@ -172,6 +172,8 @@ function RateModal({ vendor, onClose, onSubmit }) {
 // ——————————————————————————
 function VendorFormModal({ vendor, onClose, onSave }) {
   const isEdit = Boolean(vendor?._id);
+  const [createAccount, setCreateAccount] = useState(false);
+  const [password, setPassword] = useState('vendor123');
   const [form, setForm] = useState({
     name: vendor?.name || '',
     businessName: vendor?.businessName || '',
@@ -181,7 +183,7 @@ function VendorFormModal({ vendor, onClose, onSave }) {
     email: vendor?.email || '',
     description: vendor?.description || '',
     licenseNumber: vendor?.licenseNumber || '',
-    serviceAreas: vendor?.serviceAreas?.join(', ') || 'Wing A, Wing B, Wing C',
+    serviceAreas: vendor?.serviceAreas?.join(', ') || '',
     tags: vendor?.tags?.join(', ') || '',
     isEmergencyContact: vendor?.isEmergencyContact || false,
   });
@@ -192,17 +194,22 @@ function VendorFormModal({ vendor, onClose, onSave }) {
 
   const handleSubmit = async () => {
     if (!form.name || !form.category || !form.phone) { setError('Name, category, and phone are required.'); return; }
+    if (!isEdit && createAccount && !form.email) { setError('Email is required to create a vendor login account.'); return; }
     setSubmitting(true);
     setError('');
     try {
-      await onSave({
+      const payload = {
         ...form,
         serviceAreas: form.serviceAreas.split(',').map(s => s.trim()).filter(Boolean),
         tags: form.tags.split(',').map(s => s.trim()).filter(Boolean),
         emergencyPhone: form.emergencyPhone || null,
         email: form.email || null,
         licenseNumber: form.licenseNumber || null,
-      });
+      };
+      if (!isEdit && createAccount && form.email) {
+        payload.password = password || 'vendor123';
+      }
+      await onSave(payload);
       onClose();
     } catch (e) {
       setError(e?.response?.data?.message || 'Failed to save vendor.');
@@ -269,6 +276,45 @@ function VendorFormModal({ vendor, onClose, onSave }) {
               <input value={form.tags} onChange={e => set('tags', e.target.value)} placeholder="Leak Repair, Pipeline, Fittings" className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500" />
             </div>
           </div>
+
+          {!isEdit && (
+            <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+              <label className="flex items-center gap-2.5 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={createAccount}
+                  onChange={e => setCreateAccount(e.target.checked)}
+                  className="w-4 h-4 accent-teal-600 rounded"
+                />
+                <span className="text-xs font-bold text-slate-800">
+                  Provision Portal Login Account for this Vendor
+                </span>
+              </label>
+              <p className="text-[11px] text-slate-500 pl-6">
+                Enables this vendor to sign in and view their assigned service work orders.
+              </p>
+
+              {createAccount && (
+                <div className="pl-6 space-y-2 pt-1">
+                  <div>
+                    <label className="text-xs font-bold text-slate-600 mb-1 block">Initial Password *</label>
+                    <input
+                      type="text"
+                      value={password}
+                      onChange={e => setPassword(e.target.value)}
+                      placeholder="vendor123"
+                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-mono focus:outline-none focus:ring-2 focus:ring-teal-500"
+                    />
+                  </div>
+                  {!form.email && (
+                    <p className="text-[11px] text-amber-600 font-semibold">
+                      * Please provide an Email above to enable login.
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
 
           <label className="flex items-center gap-3 cursor-pointer p-3 rounded-xl border border-slate-200 hover:border-teal-300 transition">
             <input
@@ -498,7 +544,7 @@ export const VendorDirectoryHub = () => {
       showToast('Vendor updated.');
     } else {
       await api.post('/vendors', data);
-      showToast(`${data.name} added to directory.`);
+      showToast(data.password ? `${data.name} added & login account provisioned!` : `${data.name} added to directory.`);
     }
     fetchVendors();
   };

@@ -52,6 +52,111 @@ export const login = async (req, res) => {
   }
 };
 
+export const registerSociety = async (req, res) => {
+  try {
+    const {
+      societyName,
+      societyCode,
+      city,
+      address,
+      pincode,
+      adminName,
+      adminEmail,
+      adminPhone,
+      adminPassword,
+    } = req.body;
+
+    if (!societyName || !societyCode || !adminName || !adminEmail || !adminPassword) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide society name, society code, admin name, email, and password.',
+      });
+    }
+
+    const { society, user } = await dataStore.registerSociety({
+      societyName,
+      societyCode,
+      city: city || 'Pune',
+      address: address || '',
+      pincode: pincode || '',
+      adminName,
+      adminEmail,
+      adminPhone: adminPhone || '',
+      adminPassword,
+    });
+
+    const token = dataStore.generateToken(user);
+
+    await dataStore.logAction({
+      societyId: society._id,
+      actorId: user._id,
+      actorName: user.name,
+      actorRole: 'admin',
+      action: 'SOCIETY_REGISTERED',
+      targetType: 'Society',
+      targetId: society._id.toString(),
+      details: { societyName: society.name, code: society.code },
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'Society and admin account registered successfully!',
+      token,
+      user,
+      society,
+    });
+  } catch (error) {
+    console.error('Register society error:', error);
+    res.status(400).json({ success: false, message: error.message || 'Registration failed.' });
+  }
+};
+
+export const provisionUser = async (req, res) => {
+  try {
+    const societyId = req.headers['x-society-id'] || req.user.societyId;
+    const { name, email, password, phone, role, gatePost, badgeNumber, businessName, serviceCategory } = req.body;
+
+    if (!name || !email || !password || !role) {
+      return res.status(400).json({
+        success: false,
+        message: 'Name, email, password, and role are required.',
+      });
+    }
+
+    const newUser = await dataStore.createStaffUser(societyId, {
+      name,
+      email,
+      password,
+      phone,
+      role,
+      gatePost,
+      badgeNumber,
+      businessName,
+      serviceCategory,
+    });
+
+    await dataStore.logAction({
+      societyId,
+      actorId: req.user._id,
+      actorName: req.user.name,
+      actorRole: req.user.role,
+      action: 'USER_PROVISIONED',
+      targetType: 'User',
+      targetId: newUser._id.toString(),
+      details: { role, email, name },
+    });
+
+    res.status(201).json({
+      success: true,
+      message: `${role.toUpperCase()} account for ${name} created successfully.`,
+      user: newUser,
+    });
+  } catch (error) {
+    console.error('Provision user error:', error);
+    res.status(400).json({ success: false, message: error.message || 'Failed to provision user.' });
+  }
+};
+
 export const demoLogin = async (req, res) => {
   try {
     const { role = 'admin', societyCode = 'GGH-01' } = req.body;

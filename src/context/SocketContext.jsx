@@ -98,26 +98,7 @@ export const SocketProvider = ({ children }) => {
   const { user, society, role } = useAuth();
   const [socket, setSocket] = useState(null);
   const [connected, setConnected] = useState(false);
-  const [notifications, setNotifications] = useState([
-    {
-      id: 'init-1',
-      category: 'visitor',
-      title: 'Dr. Rajesh Kulkarni Approved',
-      message: 'Gate pass #718902 is active for Flat B-402',
-      priority: 'normal',
-      timestamp: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
-      read: false,
-    },
-    {
-      id: 'init-2',
-      category: 'delivery',
-      title: 'Amazon Package at Gate',
-      message: 'Held at Main Gate 1 • Pickup OTP: 4821',
-      priority: 'normal',
-      timestamp: new Date(Date.now() - 45 * 60 * 1000).toISOString(),
-      read: false,
-    },
-  ]);
+  const [notifications, setNotifications] = useState([]);
 
   // Active visitor popup for resident approval
   const [activeGateApproval, setActiveGateApproval] = useState(null);
@@ -167,13 +148,22 @@ export const SocketProvider = ({ children }) => {
 
   // Connect Socket.IO
   useEffect(() => {
-    const socketUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+    if (!user) {
+      setSocket(null);
+      setConnected(false);
+      return;
+    }
+
+    const socketUrl = import.meta.env.VITE_SOCKET_URL ||
+      (import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace(/\/api\/?$/, '') : '') ||
+      (typeof window !== 'undefined' ? window.location.origin : '');
+
     const newSocket = io(socketUrl, {
       auth: {
         token: localStorage.getItem('nivasa_token'),
-        societyId: society?._id || '67a800000000000000000001',
-        flatNumber: user?.flatNumber || 'B-402',
-        role: role || 'resident',
+        societyId: society?._id || user?.societyId,
+        flatNumber: user?.flatNumber || '',
+        role: role || user?.role || 'resident',
       },
       transports: ['websocket', 'polling'],
       reconnectionAttempts: 10,

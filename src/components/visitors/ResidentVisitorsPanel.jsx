@@ -96,7 +96,7 @@ export const ResidentVisitorsPanel = () => {
         <div>
           <div className="flex items-center gap-2">
             <span className="text-[10px] font-bold uppercase tracking-wider text-amber-400 bg-teal-950 px-2.5 py-0.5 rounded-full border border-teal-700">
-              Milestone 4 • Gate Security
+              Visitor Gate Management
             </span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-bold font-display tracking-tight mt-1">

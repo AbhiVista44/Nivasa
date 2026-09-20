@@ -48,52 +48,7 @@ const STATUS_STYLES = {
   Closed: 'bg-slate-200 text-slate-600',
 };
 
-// Demo complaints data for offline mode
-const DEMO_COMPLAINTS = [
-  {
-    _id: 'demo-1',
-    complaintNumber: 'CMP-104',
-    title: 'Water leakage from bathroom ceiling',
-    description: 'There is a significant water leak from the ceiling above the bathroom, dripping onto the floor. Started 2 days ago.',
-    category: 'Plumbing',
-    priority: 'High',
-    status: 'In Progress',
-    preferredVisitTime: 'Morning (9 AM – 12 PM)',
-    flatNumber: 'B-402',
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 3).toISOString(),
-    updatedAt: new Date(Date.now() - 1000 * 60 * 20).toISOString(),
-    assignedVendor: { vendorName: 'Sunil Kumar', businessName: 'Apex Plumbing' },
-    scheduledVisit: { visitDate: new Date().toISOString().split('T')[0], timeSlot: 'Afternoon (12 PM – 4 PM)' },
-    aiClassification: { isAiAssisted: true, suggestedCategory: 'Plumbing', suggestedPriority: 'High', confidence: 0.96, source: 'groq-ai', summary: 'Water leakage reported from bathroom ceiling.' },
-    timeline: [
-      { status: 'Created', note: 'Complaint logged via Nivasa Resident Portal.', actor: 'Rahul Verma', at: new Date(Date.now() - 1000 * 60 * 60 * 3).toISOString() },
-      { status: 'Under Review', note: 'Complaint reviewed by society admin.', actor: 'Priya Sharma (Admin)', at: new Date(Date.now() - 1000 * 60 * 60 * 2.5).toISOString() },
-      { status: 'Assigned', note: 'Sunil Kumar (Apex Plumbing) assigned.', actor: 'Priya Sharma (Admin)', at: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString() },
-      { status: 'In Progress', note: 'Vendor has arrived and begun inspection.', actor: 'Sunil Kumar (Vendor)', at: new Date(Date.now() - 1000 * 60 * 25).toISOString() },
-    ],
-  },
-  {
-    _id: 'demo-2',
-    complaintNumber: 'CMP-97',
-    title: 'Bedroom window latch broken',
-    description: 'The latch mechanism on the main bedroom window is broken and the window cannot be locked properly.',
-    category: 'Carpentry',
-    priority: 'Low',
-    status: 'Closed',
-    preferredVisitTime: 'Weekends only',
-    flatNumber: 'B-402',
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 5).toISOString(),
-    updatedAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2).toISOString(),
-    assignedVendor: { vendorName: 'Anil Tiwari', businessName: 'Tiwari Carpentry Works' },
-    aiClassification: { isAiAssisted: true, suggestedCategory: 'Carpentry', suggestedPriority: 'Low', confidence: 0.88, source: 'smart-heuristic', summary: 'Bedroom window latch is broken and cannot be locked.' },
-    rating: 5,
-    residentFeedback: 'Great work! Fixed quickly and professionally.',
-    timeline: [
-      { status: 'Created', note: 'Complaint logged.', actor: 'Rahul Verma', at: new Date(Date.now() - 1000 * 60 * 60 * 24 * 5).toISOString() },
-      { status: 'Closed', note: 'Resident confirmed work completion. Rated 5 stars.', actor: 'Rahul Verma', at: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2).toISOString() },
-    ],
-  },
-];
+// No demo data — production mode only
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Lifecycle Stepper
@@ -154,8 +109,8 @@ const ComplaintDetail = ({ complaint, onBack, onConfirm }) => {
     try {
       await api.post(`/complaints/${complaint._id}/resident-confirm`, { rating, feedback });
       onConfirm?.();
-    } catch {
-      onConfirm?.(); // demo fallback
+    } catch (err) {
+      console.error('Failed to confirm resolution:', err);
     } finally {
       setConfirming(false);
     }
@@ -353,10 +308,10 @@ export const ComplaintsPanel = ({ onRaiseNew }) => {
       if (res.data.success) {
         setComplaints(res.data.complaints);
       } else {
-        setComplaints(DEMO_COMPLAINTS);
+        setComplaints([]);
       }
     } catch {
-      setComplaints(DEMO_COMPLAINTS);
+      setComplaints([]);
     } finally {
       setLoading(false);
     }

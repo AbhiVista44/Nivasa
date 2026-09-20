@@ -1,12 +1,12 @@
 import express from 'express';
-import { login, demoLogin, getMe, getDemoAccounts } from '../controllers/authController.js';
-import { verifyToken } from '../middleware/auth.js';
+import { login, registerSociety, provisionUser, getMe } from '../controllers/authController.js';
+import { verifyToken, requireRoles } from '../middleware/auth.js';
 
 const router = express.Router();
 
 router.post('/login', login);
-router.post('/demo-login', demoLogin);
-router.get('/demo-accounts', getDemoAccounts);
+router.post('/register-society', registerSociety);
+router.post('/provision-user', verifyToken, requireRoles('admin'), provisionUser);
 router.get('/me', verifyToken, getMe);
 
 export default router;

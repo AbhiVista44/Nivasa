@@ -51,7 +51,7 @@ export const Sidebar = ({ activeTab, onSelectTab }) => {
       { id: 'emergency', label: 'Emergency Alert', icon: AlertTriangle, danger: true },
     ],
     vendor: [
-      { id: 'assigned-jobs', label: 'Assigned Jobs', icon: Wrench, badge: '3 Open' },
+      { id: 'assigned-jobs', label: 'Assigned Jobs', icon: Wrench },
       { id: 'schedule', label: 'Visit Schedule', icon: CalendarDays },
       { id: 'history', label: 'Completed Services', icon: History },
       { id: 'profile', label: 'Business Profile & Ratings', icon: Briefcase },
@@ -126,7 +126,7 @@ export const Sidebar = ({ activeTab, onSelectTab }) => {
         <div className="flex items-center gap-2">
           <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
           <p className="text-[11px] font-medium text-slate-300 truncate">
-            {society?.name || 'Gulmohar Greens'}
+            {society?.name || 'Nivasa Community'}
           </p>
         </div>
         <p className="text-[10px] text-slate-500 mt-1">

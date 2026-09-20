@@ -42,70 +42,7 @@ const STATUS_STYLES = {
   Closed: 'bg-slate-200 text-slate-600',
 };
 
-// Sample vendor directory for assignment
-const SAMPLE_VENDORS = [
-  { _id: 'v1', vendorName: 'Sunil Kumar', businessName: 'Apex Plumbing & Sanitation', serviceCategory: 'Plumbing', phone: '+91 98901 33445' },
-  { _id: 'v2', vendorName: 'Ramesh Gupta', businessName: 'PowerFix Electricals', serviceCategory: 'Electrical', phone: '+91 99001 22334' },
-  { _id: 'v3', vendorName: 'Anil Tiwari', businessName: 'Tiwari Carpentry Works', serviceCategory: 'Carpentry', phone: '+91 98123 44556' },
-  { _id: 'v4', vendorName: 'Clean Zone Services', businessName: 'CleanZone Pvt. Ltd.', serviceCategory: 'Cleaning', phone: '+91 98200 33445' },
-  { _id: 'v5', vendorName: 'BuildRight Pvt Ltd', businessName: 'BuildRight Civil & Painting', serviceCategory: 'Civil & Painting', phone: '+91 97001 22334' },
-];
-
-const DEMO_ADMIN_COMPLAINTS = [
-  {
-    _id: 'admin-demo-1', complaintNumber: 'CMP-104', flatNumber: 'B-402', wing: 'Wing B',
-    residentName: 'Rahul Verma', residentPhone: '+91 98221 44556',
-    title: 'Water leakage from bathroom ceiling', category: 'Plumbing', priority: 'High',
-    status: 'In Progress', preferredVisitTime: 'Morning (9 AM – 12 PM)',
-    description: 'There is a significant water leak from the ceiling above the bathroom.',
-    createdAt: new Date(Date.now() - 1000 * 60 * 180).toISOString(),
-    assignedVendor: { vendorName: 'Sunil Kumar', businessName: 'Apex Plumbing' },
-    aiClassification: { isAiAssisted: true, suggestedCategory: 'Plumbing', suggestedPriority: 'High', confidence: 0.96, source: 'groq-ai', summary: 'Water leakage reported from bathroom ceiling.' },
-    timeline: [
-      { status: 'Created', actor: 'Rahul Verma', note: 'Complaint logged by resident.', at: new Date(Date.now() - 1000 * 60 * 180).toISOString() },
-      { status: 'In Progress', actor: 'Sunil Kumar', note: 'Vendor arrived and is working.', at: new Date(Date.now() - 1000 * 60 * 25).toISOString() },
-    ],
-  },
-  {
-    _id: 'admin-demo-2', complaintNumber: 'CMP-103', flatNumber: 'A-801', wing: 'Wing A',
-    residentName: 'Deepak Mehta', residentPhone: '+91 99001 55667',
-    title: 'Power fluctuation in living room', category: 'Electrical', priority: 'Medium',
-    status: 'Under Review', preferredVisitTime: 'Afternoon (12 PM – 4 PM)',
-    description: 'Frequent power fluctuations in the living room circuit, light dims intermittently.',
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 3).toISOString(),
-    aiClassification: { isAiAssisted: true, suggestedCategory: 'Electrical', suggestedPriority: 'Medium', confidence: 0.91, source: 'groq-ai', summary: 'Electrical power fluctuation in living room circuit.' },
-    timeline: [
-      { status: 'Created', actor: 'Deepak Mehta', note: 'Complaint logged.', at: new Date(Date.now() - 1000 * 60 * 60 * 3).toISOString() },
-      { status: 'Under Review', actor: 'Priya Sharma (Admin)', note: 'Reviewing priority and category.', at: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString() },
-    ],
-  },
-  {
-    _id: 'admin-demo-3', complaintNumber: 'CMP-102', flatNumber: 'C-204', wing: 'Wing C',
-    residentName: 'Sanjana Kapoor', residentPhone: '+91 98100 33221',
-    title: 'Balcony drainage blockage', category: 'Civil & Painting', priority: 'Low',
-    status: 'Created', preferredVisitTime: 'Weekends only',
-    description: 'Balcony drain is clogged causing water accumulation during rains.',
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
-    aiClassification: { isAiAssisted: true, suggestedCategory: 'Civil & Painting', suggestedPriority: 'Low', confidence: 0.85, source: 'smart-heuristic', summary: 'Balcony drainage blockage causing water accumulation.' },
-    timeline: [
-      { status: 'Created', actor: 'Sanjana Kapoor', note: 'Complaint logged.', at: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString() },
-    ],
-  },
-  {
-    _id: 'admin-demo-4', complaintNumber: 'CMP-101', flatNumber: 'D-509', wing: 'Wing D',
-    residentName: 'Vikram Patil', residentPhone: '+91 96001 88990',
-    title: 'Main door lock broken', category: 'Carpentry', priority: 'High',
-    status: 'Assigned', preferredVisitTime: 'Morning (9 AM – 12 PM)',
-    description: 'The main entry door lock is broken, door cannot be locked securely.',
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 5).toISOString(),
-    assignedVendor: { vendorName: 'Anil Tiwari', businessName: 'Tiwari Carpentry Works' },
-    aiClassification: { isAiAssisted: true, suggestedCategory: 'Carpentry', suggestedPriority: 'High', confidence: 0.93, source: 'groq-ai', summary: 'Main door lock broken; door cannot be secured.' },
-    timeline: [
-      { status: 'Created', actor: 'Vikram Patil', note: 'Complaint logged.', at: new Date(Date.now() - 1000 * 60 * 60 * 5).toISOString() },
-      { status: 'Assigned', actor: 'Priya Sharma (Admin)', note: 'Assigned to Anil Tiwari.', at: new Date(Date.now() - 1000 * 60 * 60 * 3).toISOString() },
-    ],
-  },
-];
+// No demo data — production mode only
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Admin Complaint Detail
@@ -115,6 +52,8 @@ const AdminComplaintDetail = ({ complaint, onBack, onUpdated }) => {
   const [newStatus, setNewStatus] = useState(complaint.status);
   const [updatingStatus, setUpdatingStatus] = useState(false);
 
+  const [vendors, setVendors] = useState([]);
+  const [loadingVendors, setLoadingVendors] = useState(false);
   const [selectedVendor, setSelectedVendor] = useState(null);
   const [assignNote, setAssignNote] = useState('');
   const [assigning, setAssigning] = useState(false);
@@ -124,6 +63,25 @@ const AdminComplaintDetail = ({ complaint, onBack, onUpdated }) => {
   const [scheduling, setScheduling] = useState(false);
 
   const ai = complaint.aiClassification;
+
+  useEffect(() => {
+    if (!complaint.assignedVendor) {
+      const fetchVendors = async () => {
+        setLoadingVendors(true);
+        try {
+          const res = await api.get('/vendors');
+          if (res.data.success) {
+            setVendors(res.data.vendors || []);
+          }
+        } catch (err) {
+          console.warn('Failed to load vendors:', err);
+        } finally {
+          setLoadingVendors(false);
+        }
+      };
+      fetchVendors();
+    }
+  }, [complaint.assignedVendor]);
 
   const handleStatusUpdate = async () => {
     if (!newStatus || newStatus === complaint.status) return;
@@ -146,10 +104,10 @@ const AdminComplaintDetail = ({ complaint, onBack, onUpdated }) => {
     try {
       await api.put(`/complaints/${complaint._id}/assign-vendor`, {
         vendorId: selectedVendor._id,
-        vendorName: selectedVendor.vendorName,
-        businessName: selectedVendor.businessName,
-        phone: selectedVendor.phone,
-        serviceCategory: selectedVendor.serviceCategory,
+        vendorName: selectedVendor.name || selectedVendor.vendorName,
+        businessName: selectedVendor.businessName || '',
+        phone: selectedVendor.phone || '',
+        serviceCategory: selectedVendor.category || selectedVendor.serviceCategory || '',
         note: assignNote,
       });
       onUpdated?.();
@@ -269,30 +227,40 @@ const AdminComplaintDetail = ({ complaint, onBack, onUpdated }) => {
       {!complaint.assignedVendor && (
         <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs space-y-3">
           <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider">Assign Vendor</h3>
-          <div className="grid grid-cols-1 gap-2">
-            {SAMPLE_VENDORS.map((v) => (
-              <button
-                key={v._id}
-                onClick={() => setSelectedVendor(selectedVendor?._id === v._id ? null : v)}
-                className={`flex items-center gap-3 p-3 rounded-xl border text-left text-sm transition ${
-                  selectedVendor?._id === v._id
-                    ? 'bg-teal-50 border-teal-400 ring-1 ring-teal-400'
-                    : 'bg-white border-slate-200 hover:border-teal-300'
-                }`}
-              >
-                <div className="w-8 h-8 rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center shrink-0">
-                  <Wrench className="w-4 h-4 text-slate-500" />
-                </div>
-                <div className="flex-1">
-                  <p className="font-semibold text-slate-800 text-xs">{v.vendorName}</p>
-                  <p className="text-[11px] text-slate-500">{v.businessName} • {v.serviceCategory}</p>
-                </div>
-                {selectedVendor?._id === v._id && (
-                  <CheckCircle2 className="w-4 h-4 text-teal-600 shrink-0" />
-                )}
-              </button>
-            ))}
-          </div>
+          {loadingVendors ? (
+            <div className="flex items-center justify-center py-6 text-slate-400 text-xs">
+              <Loader2 className="w-4 h-4 animate-spin mr-2" /> Loading approved vendors…
+            </div>
+          ) : vendors.length === 0 ? (
+            <div className="py-4 px-3 bg-slate-50 rounded-xl border border-slate-200 text-center text-xs text-slate-500">
+              No approved vendors in directory. Add vendors from the Vendor Directory tab to assign work orders.
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-2">
+              {vendors.map((v) => (
+                <button
+                  key={v._id}
+                  onClick={() => setSelectedVendor(selectedVendor?._id === v._id ? null : v)}
+                  className={`flex items-center gap-3 p-3 rounded-xl border text-left text-sm transition ${
+                    selectedVendor?._id === v._id
+                      ? 'bg-teal-50 border-teal-400 ring-1 ring-teal-400'
+                      : 'bg-white border-slate-200 hover:border-teal-300'
+                  }`}
+                >
+                  <div className="w-8 h-8 rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center shrink-0">
+                    <Wrench className="w-4 h-4 text-slate-500" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-semibold text-slate-800 text-xs">{v.name || v.vendorName}</p>
+                    <p className="text-[11px] text-slate-500">{v.businessName || v.name} • {v.category || v.serviceCategory}</p>
+                  </div>
+                  {selectedVendor?._id === v._id && (
+                    <CheckCircle2 className="w-4 h-4 text-teal-600 shrink-0" />
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
           {selectedVendor && (
             <>
               <input
@@ -308,7 +276,7 @@ const AdminComplaintDetail = ({ complaint, onBack, onUpdated }) => {
                 className="flex items-center gap-2 px-4 py-2.5 bg-indigo-700 hover:bg-indigo-800 text-white font-bold rounded-xl text-sm transition"
               >
                 {assigning ? <Loader2 className="w-4 h-4 animate-spin" /> : <User className="w-4 h-4" />}
-                Assign {selectedVendor.vendorName}
+                Assign {selectedVendor.name || selectedVendor.vendorName}
               </button>
             </>
           )}
@@ -387,13 +355,13 @@ export const AdminComplaintsPanel = () => {
     setLoading(true);
     try {
       const res = await api.get('/complaints');
-      if (res.data.success && res.data.complaints.length > 0) {
+      if (res.data.success) {
         setComplaints(res.data.complaints);
       } else {
-        setComplaints(DEMO_ADMIN_COMPLAINTS);
+        setComplaints([]);
       }
     } catch {
-      setComplaints(DEMO_ADMIN_COMPLAINTS);
+      setComplaints([]);
     } finally {
       setLoading(false);
     }

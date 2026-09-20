@@ -30,7 +30,7 @@ router.post('/', verifyToken, requireRoles(['admin']), async (req, res) => {
   try {
     const societyId = req.headers['x-society-id'] || req.user.societyId;
     const {
-      name, businessName, category, phone, emergencyPhone, email,
+      name, businessName, category, phone, emergencyPhone, email, password,
       serviceAreas, licenseNumber, description, tags, isEmergencyContact,
     } = req.body;
 
@@ -48,9 +48,26 @@ router.post('/', verifyToken, requireRoles(['admin']), async (req, res) => {
       req.user
     );
 
+    // If login credentials provided, also provision vendor user account
+    if (email && password) {
+      try {
+        await dataStore.createStaffUser(societyId, {
+          name,
+          email,
+          password,
+          phone,
+          role: 'vendor',
+          businessName: businessName || name,
+          serviceCategory: category,
+        });
+      } catch (userErr) {
+        console.warn('Vendor user account creation warning:', userErr.message);
+      }
+    }
+
     await dataStore.logAction({
       societyId,
-      actorId: req.user.id,
+      actorId: req.user.id || req.user._id,
       actorName: req.user.name,
       actorRole: req.user.role,
       action: 'VENDOR_ADDED',

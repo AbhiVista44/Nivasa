@@ -42,7 +42,7 @@ export const SecurityDashboard = ({ activeTab = 'gate-console', onNavigate }) =>
   // Walk-in Registration form state
   const [walkinName, setWalkinName] = useState('');
   const [walkinPhone, setWalkinPhone] = useState('');
-  const [walkinFlat, setWalkinFlat] = useState('B-402');
+  const [walkinFlat, setWalkinFlat] = useState('');
   const [walkinType, setWalkinType] = useState('Guest');
   const [walkinVehicle, setWalkinVehicle] = useState('');
   const [walkinSubmitting, setWalkinSubmitting] = useState(false);
@@ -352,16 +352,6 @@ export const SecurityDashboard = ({ activeTab = 'gate-console', onNavigate }) =>
                 </p>
               </div>
             </div>
-
-            <button
-              onClick={() => {
-                setPasscode('718902');
-              }}
-              className="text-[10px] font-mono font-bold text-teal-700 bg-teal-50 border border-teal-200 px-2 py-1 rounded-lg hover:bg-teal-100 transition"
-              title="Click to autofill sample valid pass"
-            >
-              Test PIN: 718902
-            </button>
           </div>
 
           <form onSubmit={handleVerifyPasscode} className="space-y-4">
@@ -373,7 +363,7 @@ export const SecurityDashboard = ({ activeTab = 'gate-console', onNavigate }) =>
                 <input
                   type="text"
                   maxLength={6}
-                  placeholder="e.g. 718902"
+                  placeholder="Enter 6-digit PIN"
                   value={passcode}
                   onChange={(e) => setPasscode(e.target.value)}
                   className="w-full px-4 py-3 text-lg font-mono font-black tracking-widest bg-slate-50 border border-slate-300 rounded-2xl focus:outline-hidden focus:ring-2 focus:ring-amber-500"
@@ -532,16 +522,13 @@ export const SecurityDashboard = ({ activeTab = 'gate-console', onNavigate }) =>
             <div className="grid grid-cols-3 gap-2">
               <div>
                 <label className="block font-semibold text-slate-700 mb-1">Destination Flat *</label>
-                <select
+                <input
+                  type="text"
+                  placeholder="e.g. A-101"
                   value={walkinFlat}
-                  onChange={(e) => setWalkinFlat(e.target.value)}
+                  onChange={(e) => setWalkinFlat(e.target.value.toUpperCase())}
                   className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-mono font-bold"
-                >
-                  <option value="B-402">B-402 (Rahul Verma)</option>
-                  <option value="A-701">A-701 (Kunal Singhania)</option>
-                  <option value="C-304">C-304 (Aditi Rao)</option>
-                  <option value="A-101">A-101 (Priya Sharma)</option>
-                </select>
+                />
               </div>
 
               <div>

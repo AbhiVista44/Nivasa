@@ -15,15 +15,18 @@ const societySchema = new mongoose.Schema({
   },
   address: {
     type: String,
-    required: true,
+    default: '',
+    trim: true,
   },
   city: {
     type: String,
     required: true,
+    trim: true,
   },
   pincode: {
     type: String,
-    required: true,
+    default: '000000',
+    trim: true,
   },
   wings: [{
     name: String, // e.g. "Wing A", "Wing B"

@@ -66,7 +66,13 @@ export const registerSociety = async (req, res) => {
       adminPassword,
     } = req.body;
 
-    if (!societyName || !societyCode || !adminName || !adminEmail || !adminPassword) {
+    if (
+      !societyName?.trim() ||
+      !societyCode?.trim() ||
+      !adminName?.trim() ||
+      !adminEmail?.trim() ||
+      !adminPassword
+    ) {
       return res.status(400).json({
         success: false,
         message: 'Please provide society name, society code, admin name, email, and password.',
@@ -74,14 +80,14 @@ export const registerSociety = async (req, res) => {
     }
 
     const { society, user } = await dataStore.registerSociety({
-      societyName,
-      societyCode,
-      city: city || 'Pune',
-      address: address || '',
-      pincode: pincode || '',
-      adminName,
-      adminEmail,
-      adminPhone: adminPhone || '',
+      societyName: societyName.trim(),
+      societyCode: societyCode.trim(),
+      city: city ? city.trim() : 'Pune',
+      address: address ? address.trim() : '',
+      pincode: pincode ? pincode.trim() : '',
+      adminName: adminName.trim(),
+      adminEmail: adminEmail.trim().toLowerCase(),
+      adminPhone: adminPhone ? adminPhone.trim() : '',
       adminPassword,
     });
 
@@ -107,7 +113,10 @@ export const registerSociety = async (req, res) => {
     });
   } catch (error) {
     console.error('Register society error:', error);
-    res.status(400).json({ success: false, message: error.message || 'Registration failed.' });
+    const friendlyMessage = error.errors
+      ? Object.values(error.errors).map(e => e.message).join(', ')
+      : (error.message || 'Registration failed.');
+    res.status(400).json({ success: false, message: friendlyMessage });
   }
 };
 

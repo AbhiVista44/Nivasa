@@ -51,18 +51,23 @@ export const LoginPage = () => {
     setSuccessMsg('');
 
     if (!societyName.trim() || !societyCode.trim() || !adminName.trim() || !adminEmail.trim() || !adminPassword) {
-      setErrorMsg('Please fill in all mandatory fields.');
+      setErrorMsg('Please fill in all mandatory fields (marked with *).');
       return;
     }
 
+    const cleanCode = societyCode.trim().replace(/\s*-\s*/g, '-').replace(/\s+/g, '-').toUpperCase();
+    const cleanCity = city.trim() || 'Pune';
+    const cleanAddress = address.trim() || (cleanCity ? `${cleanCity}, India` : 'Residential Society');
+    const cleanPincode = pincode.trim() || '000000';
+
     const res = await registerSociety({
       societyName: societyName.trim(),
-      societyCode: societyCode.trim().toUpperCase(),
-      city: city.trim() || 'Pune',
-      address: address.trim(),
-      pincode: pincode.trim(),
+      societyCode: cleanCode,
+      city: cleanCity,
+      address: cleanAddress,
+      pincode: cleanPincode,
       adminName: adminName.trim(),
-      adminEmail: adminEmail.trim(),
+      adminEmail: adminEmail.trim().toLowerCase(),
       adminPhone: adminPhone.trim(),
       adminPassword,
     });
@@ -254,7 +259,9 @@ export const LoginPage = () => {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">Pincode</label>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                      Pincode <span className="text-slate-400 font-normal">(Optional)</span>
+                    </label>
                     <input
                       type="text"
                       value={pincode}
@@ -266,7 +273,9 @@ export const LoginPage = () => {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Society Address</label>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Society Address <span className="text-slate-400 font-normal">(Optional)</span>
+                  </label>
                   <input
                     type="text"
                     value={address}

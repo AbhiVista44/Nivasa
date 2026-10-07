@@ -268,22 +268,35 @@ class DataStore {
       adminPassword,
     } = data;
 
+    const normalizedCode = (societyCode || '')
+      .trim()
+      .replace(/\s*-\s*/g, '-')
+      .replace(/\s+/g, '-')
+      .toUpperCase();
+    const normalizedEmail = (adminEmail || '').trim().toLowerCase();
+    const cleanCity = (city || 'Pune').trim();
+    const cleanAddress = (address || '').trim() || (cleanCity ? `${cleanCity}, India` : 'Residential Society');
+    const cleanPincode = (pincode || '').trim() || '000000';
+    const cleanPhone = (adminPhone || '').trim();
+    const cleanName = (societyName || '').trim();
+    const cleanAdminName = (adminName || '').trim();
+
     if (this.isMongoConnected()) {
-      const existingSociety = await Society.findOne({ code: societyCode.toUpperCase() });
+      const existingSociety = await Society.findOne({ code: normalizedCode });
       if (existingSociety) {
-        throw new Error(`Society code "${societyCode.toUpperCase()}" is already registered.`);
+        throw new Error(`Society code "${normalizedCode}" is already registered. Please choose a different unique code.`);
       }
-      const existingUser = await User.findOne({ email: adminEmail.toLowerCase() });
+      const existingUser = await User.findOne({ email: normalizedEmail });
       if (existingUser) {
-        throw new Error(`Email "${adminEmail}" is already registered.`);
+        throw new Error(`Email "${normalizedEmail}" is already registered. Please use another email or sign in.`);
       }
 
       const society = await Society.create({
-        name: societyName,
-        code: societyCode.toUpperCase(),
-        city,
-        address,
-        pincode: pincode || '000000',
+        name: cleanName,
+        code: normalizedCode,
+        city: cleanCity,
+        address: cleanAddress,
+        pincode: cleanPincode,
         wings: [],
         totalFlats: 0,
         status: 'active',
@@ -291,10 +304,10 @@ class DataStore {
 
       const adminUser = await User.create({
         societyId: society._id,
-        name: adminName,
-        email: adminEmail.toLowerCase(),
+        name: cleanAdminName,
+        email: normalizedEmail,
         password: adminPassword,
-        phone: adminPhone,
+        phone: cleanPhone,
         role: 'admin',
         status: 'active',
       });
@@ -304,23 +317,23 @@ class DataStore {
     }
 
     // In-memory mode
-    const existingSociety = this.societies.find(s => s.code.toUpperCase() === societyCode.toUpperCase());
+    const existingSociety = this.societies.find(s => s.code.toUpperCase() === normalizedCode);
     if (existingSociety) {
-      throw new Error(`Society code "${societyCode.toUpperCase()}" is already registered.`);
+      throw new Error(`Society code "${normalizedCode}" is already registered. Please choose a different unique code.`);
     }
-    const existingUser = this.users.find(u => u.email.toLowerCase() === adminEmail.toLowerCase());
+    const existingUser = this.users.find(u => u.email.toLowerCase() === normalizedEmail);
     if (existingUser) {
-      throw new Error(`Email "${adminEmail}" is already registered.`);
+      throw new Error(`Email "${normalizedEmail}" is already registered. Please use another email or sign in.`);
     }
 
     const societyId = new mongoose.Types.ObjectId();
     const newSociety = {
       _id: societyId,
-      name: societyName,
-      code: societyCode.toUpperCase(),
-      city,
-      address,
-      pincode: pincode || '000000',
+      name: cleanName,
+      code: normalizedCode,
+      city: cleanCity,
+      address: cleanAddress,
+      pincode: cleanPincode,
       wings: [],
       totalFlats: 0,
       status: 'active',
@@ -333,11 +346,11 @@ class DataStore {
     const newAdmin = {
       _id: adminId,
       societyId,
-      name: adminName,
-      email: adminEmail.toLowerCase(),
+      name: cleanAdminName,
+      email: normalizedEmail,
       password: adminPassword,
       passwordHash,
-      phone: adminPhone,
+      phone: cleanPhone,
       role: 'admin',
       status: 'active',
       createdAt: new Date(),

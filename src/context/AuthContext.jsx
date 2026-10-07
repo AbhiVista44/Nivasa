@@ -81,9 +81,13 @@ export const AuthProvider = ({ children }) => {
       }
       return { success: false, message: res.data.message || 'Login failed' };
     } catch (err) {
+      const serverMsg = err.response?.data?.message;
+      const networkMsg = !err.response
+        ? 'Cannot reach backend server. Please make sure the Nivasa backend is running on port 5000.'
+        : null;
       return {
         success: false,
-        message: err.response?.data?.message || 'Login failed. Please verify your credentials and network connection.',
+        message: serverMsg || networkMsg || err.message || 'Login failed. Please verify your credentials and network connection.',
       };
     } finally {
       setLoading(false);
@@ -103,9 +107,13 @@ export const AuthProvider = ({ children }) => {
       }
       return { success: false, message: res.data.message || 'Registration failed' };
     } catch (err) {
+      const serverMsg = err.response?.data?.message;
+      const networkMsg = !err.response
+        ? 'Cannot reach backend server. Please make sure the Nivasa backend is running on port 5000.'
+        : null;
       return {
         success: false,
-        message: err.response?.data?.message || 'Failed to register society. Please check your inputs.',
+        message: serverMsg || networkMsg || err.message || 'Failed to register society. Please check your inputs.',
       };
     } finally {
       setLoading(false);

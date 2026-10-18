@@ -33,8 +33,15 @@ const generateUniqueSocietyCode = (name = '') => {
 };
 
 export const LoginPage = () => {
-  const { login, registerSociety, loading } = useAuth();
+  const { login, registerSociety, loading, societies } = useAuth();
   const [activeTab, setActiveTab] = useState('login'); // 'login' | 'register-society'
+
+  // If no societies exist in database, default to onboarding registration
+  React.useEffect(() => {
+    if (Array.isArray(societies) && societies.length === 0) {
+      setActiveTab('register-society');
+    }
+  }, [societies]);
 
   // Login form state
   const [email, setEmail] = useState('');

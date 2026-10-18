@@ -1,7 +1,6 @@
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
-import { initialSocieties, initialUsers, initialFlats, initialComplaints, initialVisitors, initialDeliveries, initialFacilities, initialFacilityBookings } from '../data/seedData.js';
-import { initialNotices, initialVendors } from '../data/seedDataM6.js';
+import { defaultFacilities } from '../data/defaultFacilities.js';
 import { User } from '../models/User.js';
 import { Society } from '../models/Society.js';
 import { Flat } from '../models/Flat.js';
@@ -18,21 +17,18 @@ const JWT_SECRET = process.env.JWT_SECRET || 'nivasa_super_secret_jwt_key_2026_r
 
 class DataStore {
   constructor() {
-    this.societies = [...initialSocieties];
-    this.users = initialUsers.map(u => ({
-      ...u,
-      passwordHash: bcrypt.hashSync(u.password, 10),
-    }));
-    this.flats = [...initialFlats];
-    this.complaints = [...initialComplaints];
-    this.visitors = [...initialVisitors];
-    this.deliveries = [...initialDeliveries];
-    this.facilities = [...initialFacilities];
-    this.facilityBookings = [...initialFacilityBookings];
-    this.notices = [...initialNotices];
-    this.vendors = [...initialVendors];
+    this.societies = [];
+    this.users = [];
+    this.flats = [];
+    this.complaints = [];
+    this.visitors = [];
+    this.deliveries = [];
+    this.facilities = [...defaultFacilities];
+    this.facilityBookings = [];
+    this.notices = [];
+    this.vendors = [];
     this.auditLogs = [];
-    this.isSeeded = false;
+    this.isSeeded = true;
   }
 
   isMongoConnected() {
@@ -40,69 +36,9 @@ class DataStore {
   }
 
   async ensureSeeded() {
-    if (!this.isMongoConnected() || this.isSeeded) return;
-    try {
-      const societyCount = await Society.countDocuments();
-      if (societyCount === 0) {
-        console.log('🌱 Empty MongoDB detected. Auto-seeding initial societies...');
-        for (const s of initialSocieties) {
-          await Society.create(s);
-        }
-      }
-
-      const userCount = await User.countDocuments();
-      if (userCount === 0) {
-        console.log('🌱 Auto-seeding initial multi-role users into MongoDB...');
-        for (const u of initialUsers) {
-          await User.create(u);
-        }
-      }
-
-      const flatCount = await Flat.countDocuments();
-      if (flatCount === 0) {
-        console.log('🌱 Auto-seeding initial society flats & resident units into MongoDB...');
-        for (const f of initialFlats) {
-          await Flat.create(f);
-        }
-      }
-
-      const complaintCount = await Complaint.countDocuments();
-      if (complaintCount === 0) {
-        console.log('🌱 Auto-seeding initial maintenance complaints with 9-stage lifecycle into MongoDB...');
-        for (const c of initialComplaints) {
-          await Complaint.create(c);
-        }
-      }
-
-      const visitorCount = await Visitor.countDocuments();
-      if (visitorCount === 0) {
-        console.log('🌱 Auto-seeding initial gate visitors & passes into MongoDB...');
-        for (const v of initialVisitors) {
-          await Visitor.create(v);
-        }
-      }
-
-      const deliveryCount = await Delivery.countDocuments();
-      if (deliveryCount === 0) {
-        console.log('🌱 Auto-seeding initial gate deliveries & parcels into MongoDB...');
-        for (const d of initialDeliveries) {
-          await Delivery.create(d);
-        }
-      }
-
-      const bookingCount = await FacilityBooking.countDocuments();
-      if (bookingCount === 0) {
-        console.log('🌱 Auto-seeding initial facility bookings into MongoDB...');
-        for (const b of initialFacilityBookings) {
-          await FacilityBooking.create(b);
-        }
-      }
-
-      this.isSeeded = true;
-      console.log('✅ MongoDB seed sync completed.');
-    } catch (err) {
-      console.warn('⚠️  Auto-seed warning:', err.message);
-    }
+    // Production mode: plain clean application with no mock/seed data auto-insertion
+    this.isSeeded = true;
+    return;
   }
 
   generateToken(user) {
@@ -140,10 +76,8 @@ class DataStore {
   }
 
   async getSocieties() {
-    await this.ensureSeeded();
     if (this.isMongoConnected()) {
-      const dbSocieties = await Society.find({ status: 'active' });
-      if (dbSocieties.length > 0) return dbSocieties;
+      return await Society.find({ status: 'active' });
     }
     return this.societies;
   }
@@ -158,10 +92,8 @@ class DataStore {
   }
 
   async getDemoUsers() {
-    await this.ensureSeeded();
     if (this.isMongoConnected()) {
-      const dbUsers = await User.find().select('-password');
-      if (dbUsers.length > 0) return dbUsers;
+      return await User.find().select('-password');
     }
     return this.users.map(({ passwordHash: _h, password: _p, ...rest }) => rest);
   }

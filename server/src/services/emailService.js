@@ -55,7 +55,7 @@ export class EmailService {
       <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; overflow: hidden;">
         <div style="background: linear-gradient(135deg, #0d5c52 0%, #0f766e 100%); padding: 24px; color: #ffffff;">
           <h2 style="margin: 0; font-size: 20px;">Gate Pass Verification Alert</h2>
-          <p style="margin: 4px 0 0; font-size: 13px; color: #ccfbf1;">${society?.name || 'Gulmohar Greens Heights'}</p>
+          <p style="margin: 4px 0 0; font-size: 13px; color: #ccfbf1;">${society?.name || 'Nivasa Community'}</p>
         </div>
         <div style="padding: 24px; color: #1e293b;">
           <p style="font-size: 14px; margin-top: 0;">Hello <strong>${residentName}</strong>,</p>
@@ -82,7 +82,7 @@ export class EmailService {
       <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background: #ffffff; border: 2px solid #ef4444; border-radius: 16px; overflow: hidden;">
         <div style="background: #dc2626; padding: 24px; color: #ffffff;">
           <h2 style="margin: 0; font-size: 20px;">🚨 URGENT COMMUNITY ANNOUNCEMENT</h2>
-          <p style="margin: 4px 0 0; font-size: 13px; color: #fee2e2;">${society?.name || 'Gulmohar Greens Heights'}</p>
+          <p style="margin: 4px 0 0; font-size: 13px; color: #fee2e2;">${society?.name || 'Nivasa Community'}</p>
         </div>
         <div style="padding: 24px; color: #1e293b;">
           <h3 style="color: #991b1b; margin-top: 0;">${notice.title}</h3>
@@ -104,7 +104,7 @@ export class EmailService {
       <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; overflow: hidden;">
         <div style="background: #0f766e; padding: 20px; color: #ffffff;">
           <h3 style="margin: 0;">Package Waiting at Security Gate</h3>
-          <p style="margin: 4px 0 0; font-size: 12px; color: #ccfbf1;">${society?.name || 'Gulmohar Greens'}</p>
+          <p style="margin: 4px 0 0; font-size: 12px; color: #ccfbf1;">${society?.name || 'Nivasa Community'}</p>
         </div>
         <div style="padding: 20px; font-size: 14px; color: #1e293b;">
           <p>Hello <strong>${residentName}</strong>,</p>

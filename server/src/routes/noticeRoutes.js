@@ -71,7 +71,8 @@ router.post('/', verifyToken, requireRoles(['admin']), async (req, res) => {
 
       // If urgent, dispatch email alert to community
       if (type === 'urgent') {
-        emailService.sendUrgentNoticeEmail('residents@gulmohargreens.org', notice, { name: 'Gulmohar Greens Heights' });
+        const society = await dataStore.getSocietyById(societyId);
+        emailService.sendUrgentNoticeEmail(req.user.email || 'admin@nivasa.com', notice, society || { name: 'Residential Community' });
       }
     }
 

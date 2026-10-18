@@ -165,47 +165,6 @@ export const provisionUser = async (req, res) => {
   }
 };
 
-export const demoLogin = async (req, res) => {
-  try {
-    const { role = 'admin', societyCode = 'GGH-01' } = req.body;
-    const users = await dataStore.getDemoUsers();
-    const societies = await dataStore.getSocieties();
-
-    const targetSociety = (societies && societies.find(s => s.code === societyCode)) || (societies && societies[0]) || null;
-    const user = users.find(u => u.role === role && targetSociety && u.societyId?.toString() === targetSociety._id?.toString()) ||
-                 users.find(u => u.role === role) ||
-                 users[0];
-
-    if (!user) {
-      return res.status(404).json({ success: false, message: 'Demo user not found for requested role.' });
-    }
-
-    const token = dataStore.generateToken(user);
-    const society = await dataStore.getSocietyById(user.societyId);
-
-    await dataStore.logAction({
-      societyId: user.societyId,
-      actorId: user._id,
-      actorName: user.name,
-      actorRole: user.role,
-      action: 'DEMO_SWITCH_ROLE',
-      targetType: 'User',
-      targetId: user._id.toString(),
-      details: { role: user.role },
-    });
-
-    res.json({
-      success: true,
-      token,
-      user,
-      society,
-    });
-  } catch (error) {
-    console.error('Demo login error:', error);
-    res.status(500).json({ success: false, message: 'Demo login failed.' });
-  }
-};
-
 export const getMe = async (req, res) => {
   try {
     const user = await dataStore.findUserById(req.user.id || req.user._id);
@@ -221,30 +180,5 @@ export const getMe = async (req, res) => {
   } catch (error) {
     console.error('Get profile error:', error);
     res.status(500).json({ success: false, message: 'Failed to retrieve profile.' });
-  }
-};
-
-export const getDemoAccounts = async (req, res) => {
-  try {
-    const users = await dataStore.getDemoUsers();
-    const societies = await dataStore.getSocieties();
-
-    const accounts = users.map(u => {
-      const society = societies.find(s => s._id.toString() === u.societyId.toString());
-      return {
-        ...u,
-        societyName: society?.name || 'Gulmohar Greens Heights',
-        societyCode: society?.code || 'GGH-01',
-      };
-    });
-
-    res.json({
-      success: true,
-      accounts,
-      societies,
-    });
-  } catch (error) {
-    console.error('Demo accounts error:', error);
-    res.status(500).json({ success: false, message: 'Could not fetch demo accounts.' });
   }
 };

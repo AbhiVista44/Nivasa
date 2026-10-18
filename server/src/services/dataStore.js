@@ -258,10 +258,13 @@ class DataStore {
     const cleanAdminName = (adminName || '').trim();
 
     if (this.isMongoConnected()) {
-      const existingSociety = await Society.findOne({ code: normalizedCode });
-      if (existingSociety) {
-        throw new Error(`Society code "${normalizedCode}" is already registered. Please choose a different unique code.`);
+      // If the code already exists (edge case: another society just registered with the same random suffix),
+      // silently resolve a new guaranteed-unique code rather than failing the user.
+      const codeConflict = await Society.findOne({ code: normalizedCode });
+      if (codeConflict) {
+        normalizedCode = await this.generateUniqueSocietyCode(societyName);
       }
+
       const existingUser = await User.findOne({ email: normalizedEmail });
       if (existingUser) {
         throw new Error(`Email "${normalizedEmail}" is already registered. Please use another email or sign in.`);
@@ -293,9 +296,9 @@ class DataStore {
     }
 
     // In-memory mode
-    const existingSociety = this.societies.find(s => s.code.toUpperCase() === normalizedCode);
-    if (existingSociety) {
-      throw new Error(`Society code "${normalizedCode}" is already registered. Please choose a different unique code.`);
+    // Silently resolve code collision — generate a fresh unique code if needed
+    if (this.societies.find(s => s.code.toUpperCase() === normalizedCode)) {
+      normalizedCode = await this.generateUniqueSocietyCode(societyName);
     }
     const existingUser = this.users.find(u => u.email.toLowerCase() === normalizedEmail);
     if (existingUser) {

@@ -73,7 +73,7 @@ export const IntercomDirectoryModal = ({ isOpen, onClose }) => {
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
             <input
               type="text"
-              placeholder="Enter Flat No. (e.g. B-402, A-102, C-204)..."
+              placeholder="Search by Flat Number (e.g. A-101, B-402, C-204)…"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               className="w-full pl-9 pr-3 py-2.5 text-xs bg-slate-50 border border-slate-300 rounded-xl font-mono font-bold uppercase focus:ring-2 focus:ring-amber-500 focus:outline-hidden"

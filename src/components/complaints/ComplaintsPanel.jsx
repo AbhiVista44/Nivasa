@@ -237,7 +237,7 @@ const ComplaintDetail = ({ complaint, onBack, onConfirm }) => {
           <textarea
             value={feedback}
             onChange={(e) => setFeedback(e.target.value)}
-            placeholder="Optional: Share your feedback on the service quality…"
+            placeholder="Optional: Share feedback on resolution speed, technician behavior, work quality, cleanliness…"
             rows={3}
             className="w-full px-3 py-2 text-sm rounded-xl border border-emerald-200 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-400 resize-none mb-3"
           />

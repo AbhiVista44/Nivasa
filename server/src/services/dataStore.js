@@ -254,6 +254,46 @@ class DataStore {
     return flat;
   }
 
+  async generateUniqueSocietyCode(name = '') {
+    await this.ensureSeeded();
+    const clean = (name || '').trim().replace(/[^a-zA-Z0-9\s]/g, '');
+    const words = clean.split(/\s+/).filter(Boolean);
+
+    let prefix = '';
+    if (words.length >= 2) {
+      prefix = words.map(w => w[0].toUpperCase()).slice(0, 4).join('');
+    } else if (words.length === 1 && words[0].length >= 3) {
+      prefix = words[0].slice(0, 3).toUpperCase();
+    } else {
+      prefix = 'NIV';
+    }
+    prefix = prefix.replace(/[^A-Z0-9]/g, '') || 'NIV';
+
+    let code = '';
+    let isUnique = false;
+    let attempts = 0;
+
+    while (!isUnique && attempts < 50) {
+      attempts++;
+      const randomDigits = Math.floor(1000 + Math.random() * 9000);
+      code = `${prefix}-${randomDigits}`;
+
+      if (this.isMongoConnected()) {
+        const existing = await Society.findOne({ code });
+        if (!existing) isUnique = true;
+      } else {
+        const existing = this.societies.find(s => s.code.toUpperCase() === code);
+        if (!existing) isUnique = true;
+      }
+    }
+
+    if (!isUnique) {
+      code = `${prefix}-${Date.now().toString().slice(-4)}`;
+    }
+
+    return code;
+  }
+
   async registerSociety(data) {
     await this.ensureSeeded();
     const {
@@ -268,11 +308,15 @@ class DataStore {
       adminPassword,
     } = data;
 
-    const normalizedCode = (societyCode || '')
+    let normalizedCode = (societyCode || '')
       .trim()
       .replace(/\s*-\s*/g, '-')
       .replace(/\s+/g, '-')
       .toUpperCase();
+
+    if (!normalizedCode) {
+      normalizedCode = await this.generateUniqueSocietyCode(societyName);
+    }
     const normalizedEmail = (adminEmail || '').trim().toLowerCase();
     const cleanCity = (city || 'Pune').trim();
     const cleanAddress = (address || '').trim() || (cleanCity ? `${cleanCity}, India` : 'Residential Society');

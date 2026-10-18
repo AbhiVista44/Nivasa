@@ -68,20 +68,19 @@ export const registerSociety = async (req, res) => {
 
     if (
       !societyName?.trim() ||
-      !societyCode?.trim() ||
       !adminName?.trim() ||
       !adminEmail?.trim() ||
       !adminPassword
     ) {
       return res.status(400).json({
         success: false,
-        message: 'Please provide society name, society code, admin name, email, and password.',
+        message: 'Please provide society name, admin name, email, and password.',
       });
     }
 
     const { society, user } = await dataStore.registerSociety({
       societyName: societyName.trim(),
-      societyCode: societyCode.trim(),
+      societyCode: societyCode ? societyCode.trim() : '',
       city: city ? city.trim() : 'Pune',
       address: address ? address.trim() : '',
       pincode: pincode ? pincode.trim() : '',

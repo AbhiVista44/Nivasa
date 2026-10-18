@@ -325,7 +325,7 @@ function BookingModal({ facility, onClose, onConfirm, existingBookings }) {
               <input
                 value={purpose}
                 onChange={e => setPurpose(e.target.value)}
-                placeholder="e.g. Birthday party, Yoga"
+                placeholder="e.g. Family Birthday Celebration, Yoga Workshop"
                 className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
               />
             </div>
@@ -335,6 +335,7 @@ function BookingModal({ facility, onClose, onConfirm, existingBookings }) {
                 type="number"
                 min={1}
                 max={facility.capacity}
+                placeholder="e.g. 25"
                 value={guestCount}
                 onChange={e => setGuestCount(parseInt(e.target.value) || 1)}
                 className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"

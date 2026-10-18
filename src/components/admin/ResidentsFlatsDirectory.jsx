@@ -628,7 +628,7 @@ export const ResidentsFlatsDirectory = () => {
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Wing A, Tower 1, Sapphire"
+                  placeholder="e.g. Wing A, Tower 1, Sapphire Block"
                   value={wingForm.name}
                   onChange={(e) => setWingForm({ ...wingForm, name: e.target.value })}
                   className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-600 focus:outline-hidden text-slate-800 font-semibold"
@@ -641,6 +641,7 @@ export const ResidentsFlatsDirectory = () => {
                   <input
                     type="number"
                     min="1"
+                    placeholder="e.g. 14"
                     value={wingForm.totalFloors}
                     onChange={(e) => setWingForm({ ...wingForm, totalFloors: Number(e.target.value) })}
                     className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-600 focus:outline-hidden text-slate-800"
@@ -651,6 +652,7 @@ export const ResidentsFlatsDirectory = () => {
                   <input
                     type="number"
                     min="1"
+                    placeholder="e.g. 4"
                     value={wingForm.flatsPerFloor}
                     onChange={(e) => setWingForm({ ...wingForm, flatsPerFloor: Number(e.target.value) })}
                     className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-600 focus:outline-hidden text-slate-800"
@@ -737,7 +739,7 @@ export const ResidentsFlatsDirectory = () => {
                   <input
                     type="text"
                     required
-                    placeholder="e.g. A-101 or 101"
+                    placeholder="e.g. A-101"
                     value={flatForm.flatNumber}
                     onChange={(e) => setFlatForm({ ...flatForm, flatNumber: e.target.value })}
                     className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-600 focus:outline-hidden text-slate-800 font-mono font-bold"
@@ -752,6 +754,7 @@ export const ResidentsFlatsDirectory = () => {
                     type="number"
                     required
                     min="0"
+                    placeholder="e.g. 1"
                     value={flatForm.floor}
                     onChange={(e) => setFlatForm({ ...flatForm, floor: Number(e.target.value) })}
                     className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-600 focus:outline-hidden text-slate-800"
@@ -778,6 +781,7 @@ export const ResidentsFlatsDirectory = () => {
                   <label className="font-bold text-slate-700 block mb-1">Carpet Area (sq.ft)</label>
                   <input
                     type="number"
+                    placeholder="e.g. 1050"
                     value={flatForm.areaSqFt}
                     onChange={(e) => setFlatForm({ ...flatForm, areaSqFt: Number(e.target.value) })}
                     className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-600 focus:outline-hidden text-slate-800"
@@ -790,7 +794,7 @@ export const ResidentsFlatsDirectory = () => {
                   <label className="font-bold text-slate-700 block mb-1">Parking Slot</label>
                   <input
                     type="text"
-                    placeholder="e.g. P-101"
+                    placeholder="e.g. P-101 (Basement 1)"
                     value={flatForm.allocatedParkingSlot}
                     onChange={(e) => setFlatForm({ ...flatForm, allocatedParkingSlot: e.target.value })}
                     className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-600 focus:outline-hidden text-slate-800 font-mono"
@@ -846,7 +850,7 @@ export const ResidentsFlatsDirectory = () => {
                         <input
                           type="email"
                           required={flatForm.assignOwnerNow}
-                          placeholder="owner@example.com"
+                          placeholder="e.g. anand.deshmukh@gmail.com"
                           value={flatForm.ownerEmail}
                           onChange={(e) => setFlatForm({ ...flatForm, ownerEmail: e.target.value })}
                           className="w-full px-3 py-2 bg-white border border-teal-200 rounded-xl focus:ring-2 focus:ring-teal-600 focus:outline-hidden text-slate-800"
@@ -857,7 +861,7 @@ export const ResidentsFlatsDirectory = () => {
                         <label className="font-bold text-slate-700 block mb-1">Mobile Phone</label>
                         <input
                           type="tel"
-                          placeholder="+91 98XXX XXXXX"
+                          placeholder="e.g. +91 98220 12345"
                           value={flatForm.ownerPhone}
                           onChange={(e) => setFlatForm({ ...flatForm, ownerPhone: e.target.value })}
                           className="w-full px-3 py-2 bg-white border border-teal-200 rounded-xl focus:ring-2 focus:ring-teal-600 focus:outline-hidden text-slate-800 font-mono"
@@ -870,6 +874,7 @@ export const ResidentsFlatsDirectory = () => {
                       <input
                         type="text"
                         required={flatForm.assignOwnerNow}
+                        placeholder="Temporary login password (min. 6 chars)"
                         value={flatForm.ownerPassword}
                         onChange={(e) => setFlatForm({ ...flatForm, ownerPassword: e.target.value })}
                         className="w-full px-3 py-2 bg-white border border-teal-200 rounded-xl focus:ring-2 focus:ring-teal-600 focus:outline-hidden text-slate-800 font-mono"
@@ -946,7 +951,7 @@ export const ResidentsFlatsDirectory = () => {
                 <input
                   type="email"
                   required
-                  placeholder="owner@example.com"
+                  placeholder="e.g. ramesh.kulkarni@gmail.com"
                   value={ownerForm.ownerEmail}
                   onChange={(e) => setOwnerForm({ ...ownerForm, ownerEmail: e.target.value })}
                   className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-600 focus:outline-hidden text-slate-800"
@@ -957,7 +962,7 @@ export const ResidentsFlatsDirectory = () => {
                 <label className="font-bold text-slate-700 block mb-1">Mobile Phone</label>
                 <input
                   type="tel"
-                  placeholder="+91 98XXX XXXXX"
+                  placeholder="e.g. +91 98220 54321"
                   value={ownerForm.ownerPhone}
                   onChange={(e) => setOwnerForm({ ...ownerForm, ownerPhone: e.target.value })}
                   className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-600 focus:outline-hidden text-slate-800 font-mono"
@@ -969,6 +974,7 @@ export const ResidentsFlatsDirectory = () => {
                 <input
                   type="text"
                   required
+                  placeholder="Temporary login password (min. 6 chars)"
                   value={ownerForm.ownerPassword}
                   onChange={(e) => setOwnerForm({ ...ownerForm, ownerPassword: e.target.value })}
                   className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-600 focus:outline-hidden text-slate-800 font-mono"

@@ -227,7 +227,7 @@ export const AdminVisitorsView = () => {
           <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
           <input
             type="text"
-            placeholder="Search visitor, flat, passcode, vehicle…"
+            placeholder="Search by visitor name, flat, passcode, or vehicle…"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-9 pr-4 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-teal-500"
@@ -352,7 +352,7 @@ export const AdminVisitorsView = () => {
                   <input
                     type="email"
                     required
-                    placeholder="guard@society.com"
+                    placeholder="e.g. security.ramesh@emeraldheights.in"
                     value={guardForm.email}
                     onChange={(e) => setGuardForm({ ...guardForm, email: e.target.value })}
                     className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-600 focus:outline-hidden text-slate-800"
@@ -363,7 +363,7 @@ export const AdminVisitorsView = () => {
                   <label className="font-bold text-slate-700 block mb-1">Mobile Phone</label>
                   <input
                     type="tel"
-                    placeholder="+91 98XXX XXXXX"
+                    placeholder="e.g. +91 98220 78901"
                     value={guardForm.phone}
                     onChange={(e) => setGuardForm({ ...guardForm, phone: e.target.value })}
                     className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-600 focus:outline-hidden text-slate-800 font-mono"
@@ -400,6 +400,7 @@ export const AdminVisitorsView = () => {
                 <input
                   type="text"
                   required
+                  placeholder="Temporary login password (min. 6 chars)"
                   value={guardForm.password}
                   onChange={(e) => setGuardForm({ ...guardForm, password: e.target.value })}
                   className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-600 focus:outline-hidden text-slate-800 font-mono"

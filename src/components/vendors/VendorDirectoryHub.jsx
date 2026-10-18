@@ -137,7 +137,7 @@ function RateModal({ vendor, onClose, onSubmit }) {
               value={review}
               onChange={e => setReview(e.target.value)}
               rows={3}
-              placeholder="Share your experience with this vendor..."
+              placeholder="Share your experience regarding punctuality, work quality, professionalism, pricing…"
               className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 resize-none"
             />
           </div>
@@ -235,11 +235,11 @@ function VendorFormModal({ vendor, onClose, onSave }) {
           <div className="grid grid-cols-2 gap-3">
             <div className="col-span-2">
               <label className="text-xs font-bold text-slate-600 mb-1 block">Vendor Name *</label>
-              <input value={form.name} onChange={e => set('name', e.target.value)} placeholder="e.g. Sunil Kumar" className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500" />
+              <input value={form.name} onChange={e => set('name', e.target.value)} placeholder="e.g. Sunil Kumar Sharma" className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500" />
             </div>
             <div className="col-span-2">
               <label className="text-xs font-bold text-slate-600 mb-1 block">Business Name</label>
-              <input value={form.businessName} onChange={e => set('businessName', e.target.value)} placeholder="e.g. Apex Plumbing Solutions" className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500" />
+              <input value={form.businessName} onChange={e => set('businessName', e.target.value)} placeholder="e.g. Apex Plumbing Solutions & Services" className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500" />
             </div>
             <div>
               <label className="text-xs font-bold text-slate-600 mb-1 block">Category *</label>
@@ -249,31 +249,31 @@ function VendorFormModal({ vendor, onClose, onSave }) {
             </div>
             <div>
               <label className="text-xs font-bold text-slate-600 mb-1 block">Phone *</label>
-              <input value={form.phone} onChange={e => set('phone', e.target.value)} placeholder="+91 98XXX XXXXX" className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500" />
+              <input value={form.phone} onChange={e => set('phone', e.target.value)} placeholder="e.g. +91 98220 98765" className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500" />
             </div>
             <div>
               <label className="text-xs font-bold text-slate-600 mb-1 block">Emergency Phone</label>
-              <input value={form.emergencyPhone} onChange={e => set('emergencyPhone', e.target.value)} placeholder="24/7 line" className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500" />
+              <input value={form.emergencyPhone} onChange={e => set('emergencyPhone', e.target.value)} placeholder="e.g. +91 98220 11223 (24/7 Helpline)" className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500" />
             </div>
             <div>
               <label className="text-xs font-bold text-slate-600 mb-1 block">Email</label>
-              <input value={form.email} onChange={e => set('email', e.target.value)} placeholder="vendor@email.com" className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500" />
+              <input value={form.email} onChange={e => set('email', e.target.value)} placeholder="e.g. support@apexplumbing.com" className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500" />
             </div>
             <div className="col-span-2">
               <label className="text-xs font-bold text-slate-600 mb-1 block">Description</label>
-              <textarea value={form.description} onChange={e => set('description', e.target.value)} rows={3} placeholder="Brief description of services..." className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 resize-none" />
+              <textarea value={form.description} onChange={e => set('description', e.target.value)} rows={3} placeholder="Describe services offered, operating hours, emergency response SLA, and certifications…" className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 resize-none" />
             </div>
             <div>
               <label className="text-xs font-bold text-slate-600 mb-1 block">License No.</label>
-              <input value={form.licenseNumber} onChange={e => set('licenseNumber', e.target.value)} placeholder="Optional" className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500" />
+              <input value={form.licenseNumber} onChange={e => set('licenseNumber', e.target.value)} placeholder="e.g. LIC-MH-2024-8921" className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500" />
             </div>
             <div>
               <label className="text-xs font-bold text-slate-600 mb-1 block">Service Areas</label>
-              <input value={form.serviceAreas} onChange={e => set('serviceAreas', e.target.value)} placeholder="Wing A, Wing B, Wing C" className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500" />
+              <input value={form.serviceAreas} onChange={e => set('serviceAreas', e.target.value)} placeholder="e.g. Wing A, Wing B, Wing C, Clubhouse" className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500" />
             </div>
             <div className="col-span-2">
               <label className="text-xs font-bold text-slate-600 mb-1 block">Tags (comma-separated)</label>
-              <input value={form.tags} onChange={e => set('tags', e.target.value)} placeholder="Leak Repair, Pipeline, Fittings" className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500" />
+              <input value={form.tags} onChange={e => set('tags', e.target.value)} placeholder="e.g. Leak Repair, Pipeline, Sanitary Fittings, RO System" className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500" />
             </div>
           </div>
 
@@ -302,7 +302,7 @@ function VendorFormModal({ vendor, onClose, onSave }) {
                       type="text"
                       value={password}
                       onChange={e => setPassword(e.target.value)}
-                      placeholder="vendor123"
+                      placeholder="Temporary login password (min. 6 chars)"
                       className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-mono focus:outline-none focus:ring-2 focus:ring-teal-500"
                     />
                   </div>
@@ -639,7 +639,7 @@ export const VendorDirectoryHub = () => {
           <input
             value={search}
             onChange={e => setSearch(e.target.value)}
-            placeholder="Search vendors, services, tags..."
+            placeholder="Search by vendor name, service category, or specialty tags…"
             className="w-full pl-9 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
           />
         </div>

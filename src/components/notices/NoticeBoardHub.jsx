@@ -292,7 +292,7 @@ function NoticeFormModal({ notice, onClose, onSave }) {
             <input
               value={title}
               onChange={e => setTitle(e.target.value)}
-              placeholder="e.g. Water Supply Interruption Tonight"
+              placeholder="e.g. Scheduled Water Tank Cleaning & Supply Interruption"
               className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
             />
           </div>
@@ -304,7 +304,7 @@ function NoticeFormModal({ notice, onClose, onSave }) {
               value={body}
               onChange={e => setBody(e.target.value)}
               rows={5}
-              placeholder="Write the full notice text here..."
+              placeholder="Provide clear notice details, timings, instructions for residents, and emergency contacts…"
               className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 resize-none leading-relaxed"
             />
           </div>

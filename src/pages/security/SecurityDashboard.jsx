@@ -363,7 +363,7 @@ export const SecurityDashboard = ({ activeTab = 'gate-console', onNavigate }) =>
                 <input
                   type="text"
                   maxLength={6}
-                  placeholder="Enter 6-digit PIN"
+                  placeholder="e.g. 583920"
                   value={passcode}
                   onChange={(e) => setPasscode(e.target.value)}
                   className="w-full px-4 py-3 text-lg font-mono font-black tracking-widest bg-slate-50 border border-slate-300 rounded-2xl focus:outline-hidden focus:ring-2 focus:ring-amber-500"
@@ -511,7 +511,7 @@ export const SecurityDashboard = ({ activeTab = 'gate-console', onNavigate }) =>
                 <label className="block font-semibold text-slate-700 mb-1">Phone Number</label>
                 <input
                   type="tel"
-                  placeholder="+91 98xxx xxxxx"
+                  placeholder="e.g. +91 98221 45678"
                   value={walkinPhone}
                   onChange={(e) => setWalkinPhone(e.target.value)}
                   className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-mono"
@@ -549,7 +549,7 @@ export const SecurityDashboard = ({ activeTab = 'gate-console', onNavigate }) =>
                 <label className="block font-semibold text-slate-700 mb-1">Vehicle No.</label>
                 <input
                   type="text"
-                  placeholder="MH 12 AB 1234"
+                  placeholder="e.g. MH 12 AB 1234"
                   value={walkinVehicle}
                   onChange={(e) => setWalkinVehicle(e.target.value.toUpperCase())}
                   className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-mono"

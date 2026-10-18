@@ -288,7 +288,7 @@ export const MyFlatHub = () => {
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Rohan Verma"
+                  placeholder="e.g. Rohan R. Verma"
                   value={newMemberName}
                   onChange={(e) => setNewMemberName(e.target.value)}
                   className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-teal-600 focus:outline-hidden"
@@ -315,7 +315,7 @@ export const MyFlatHub = () => {
                 <label className="block font-semibold text-slate-700 mb-1">Mobile Number (Optional)</label>
                 <input
                   type="tel"
-                  placeholder="+91 98xxx xxxxx"
+                  placeholder="e.g. +91 98220 34567"
                   value={newMemberPhone}
                   onChange={(e) => setNewMemberPhone(e.target.value)}
                   className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-teal-600 focus:outline-hidden"

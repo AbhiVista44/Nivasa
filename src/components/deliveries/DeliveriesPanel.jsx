@@ -232,7 +232,7 @@ function ResidentDeliveriesView({
                               <input
                                 type="text"
                                 maxLength={8}
-                                placeholder="Enter 4-6 digit OTP"
+                                placeholder="e.g. 482910 (4-6 digit OTP)"
                                 value={otpInputs[d._id] ?? (d.courierDeliveryOtp || '')}
                                 onChange={e => setOtpInputs(prev => ({ ...prev, [d._id]: e.target.value }))}
                                 className="flex-1 px-4 py-2.5 bg-white border border-amber-300 rounded-xl text-base font-mono font-bold tracking-widest text-slate-800 placeholder:font-normal placeholder:tracking-normal focus:outline-none focus:ring-2 focus:ring-amber-500"
@@ -533,7 +533,7 @@ function SecurityDeliveriesView({
           <input
             value={search}
             onChange={e => setSearch(e.target.value)}
-            placeholder="Search flat, carrier, DEL number..."
+            placeholder="Search by flat number, courier carrier, or DEL package ID…"
             className="w-full pl-9 pr-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
           />
         </div>
@@ -618,7 +618,7 @@ function SecurityDeliveriesView({
                 <input
                   value={form.residentName}
                   onChange={e => setForm(prev => ({ ...prev, residentName: e.target.value }))}
-                  placeholder="Type custom resident name"
+                  placeholder="e.g. Sneha Deshpande"
                   className="mt-2 w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 animate-in fade-in"
                 />
               )}
@@ -681,7 +681,7 @@ function SecurityDeliveriesView({
               <input
                 value={form.trackingNumber}
                 onChange={e => setForm(prev => ({ ...prev, trackingNumber: e.target.value }))}
-                placeholder="e.g. AMZ-IN-88910"
+                placeholder="e.g. AMZ-IN-889104"
                 className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
               />
             </div>
@@ -704,7 +704,7 @@ function SecurityDeliveriesView({
               <input
                 value={form.notes}
                 onChange={e => setForm(prev => ({ ...prev, notes: e.target.value }))}
-                placeholder="e.g. Parcel Rack Shelf B-2, Fragile box..."
+                placeholder="e.g. Parcel Shelf B-2, Fragile electronics box"
                 className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
               />
             </div>

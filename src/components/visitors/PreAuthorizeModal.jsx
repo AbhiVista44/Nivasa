@@ -186,7 +186,7 @@ export const PreAuthorizeModal = ({ isOpen, onClose, onPassCreated }) => {
                       <input
                         type="tel"
                         required
-                        placeholder="+91 98221 00000"
+                        placeholder="e.g. +91 98221 45678"
                         value={phone}
                         onChange={(e) => setPhone(e.target.value)}
                         className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:outline-hidden focus:ring-2 focus:ring-teal-500 font-mono"

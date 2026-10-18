@@ -60,6 +60,7 @@ export const VendorProfileView = () => {
                 type="text"
                 value={businessName}
                 onChange={(e) => setBusinessName(e.target.value)}
+                placeholder="e.g. Apex Plumbing & Maintenance Co."
                 className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-medium"
               />
             </div>
@@ -85,6 +86,7 @@ export const VendorProfileView = () => {
                   type="text"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
+                  placeholder="e.g. +91 98220 54321"
                   className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-mono"
                 />
               </div>
@@ -96,6 +98,7 @@ export const VendorProfileView = () => {
                 type="text"
                 value={hours}
                 onChange={(e) => setHours(e.target.value)}
+                placeholder="e.g. Mon-Sat: 8:00 AM - 8:00 PM (Emergency 24/7)"
                 className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl"
               />
             </div>

@@ -222,7 +222,7 @@ export const AuditLogViewer = () => {
           <input
             value={search}
             onChange={e => setSearch(e.target.value)}
-            placeholder="Search by actor, action..."
+            placeholder="Search audit trail by actor, role, event type, or details…"
             className="w-full pl-9 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
           />
         </div>

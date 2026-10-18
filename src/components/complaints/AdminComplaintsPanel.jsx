@@ -210,7 +210,7 @@ const AdminComplaintDetail = ({ complaint, onBack, onUpdated }) => {
           type="text"
           value={statusNote}
           onChange={(e) => setStatusNote(e.target.value)}
-          placeholder="Optional: Add a status note (visible in timeline)…"
+          placeholder="Optional: Add a status note for resident timeline (e.g. Parts dispatched, technician visit scheduled at 4 PM)…"
           className="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 text-slate-800"
         />
         <button

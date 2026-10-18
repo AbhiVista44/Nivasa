@@ -11,8 +11,26 @@ import {
   ArrowRight,
   ShieldCheck,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  RefreshCw
 } from 'lucide-react';
+
+const generateUniqueSocietyCode = (name = '') => {
+  const clean = (name || '').trim().replace(/[^a-zA-Z0-9\s]/g, '');
+  const words = clean.split(/\s+/).filter(Boolean);
+
+  let prefix = '';
+  if (words.length >= 2) {
+    prefix = words.map(w => w[0].toUpperCase()).slice(0, 4).join('');
+  } else if (words.length === 1 && words[0].length >= 3) {
+    prefix = words[0].slice(0, 3).toUpperCase();
+  } else {
+    prefix = 'NIV';
+  }
+  prefix = prefix.replace(/[^A-Z0-9]/g, '') || 'NIV';
+  const randomSuffix = Math.floor(1000 + Math.random() * 9000);
+  return `${prefix}-${randomSuffix}`;
+};
 
 export const LoginPage = () => {
   const { login, registerSociety, loading } = useAuth();
@@ -26,7 +44,8 @@ export const LoginPage = () => {
 
   // Register Society form state
   const [societyName, setSocietyName] = useState('');
-  const [societyCode, setSocietyCode] = useState('');
+  const [societyCode, setSocietyCode] = useState(() => generateUniqueSocietyCode(''));
+  const [isCodeCustomized, setIsCodeCustomized] = useState(false);
   const [city, setCity] = useState('');
   const [address, setAddress] = useState('');
   const [pincode, setPincode] = useState('');
@@ -34,6 +53,19 @@ export const LoginPage = () => {
   const [adminEmail, setAdminEmail] = useState('');
   const [adminPhone, setAdminPhone] = useState('');
   const [adminPassword, setAdminPassword] = useState('');
+
+  const handleSocietyNameChange = (val) => {
+    setSocietyName(val);
+    if (!isCodeCustomized) {
+      setSocietyCode(generateUniqueSocietyCode(val));
+    }
+  };
+
+  const handleRegenerateCode = () => {
+    const newCode = generateUniqueSocietyCode(societyName);
+    setSocietyCode(newCode);
+    setIsCodeCustomized(false);
+  };
 
   const handleLoginSubmit = async (e) => {
     e.preventDefault();
@@ -50,15 +82,16 @@ export const LoginPage = () => {
     setErrorMsg('');
     setSuccessMsg('');
 
-    if (!societyName.trim() || !societyCode.trim() || !adminName.trim() || !adminEmail.trim() || !adminPassword) {
+    if (!societyName.trim() || !adminName.trim() || !adminEmail.trim() || !adminPassword) {
       setErrorMsg('Please fill in all mandatory fields (marked with *).');
       return;
     }
 
-    const cleanCode = societyCode.trim().replace(/\s*-\s*/g, '-').replace(/\s+/g, '-').toUpperCase();
+    const resolvedCode = (societyCode || '').trim() || generateUniqueSocietyCode(societyName);
+    const cleanCode = resolvedCode.replace(/\s*-\s*/g, '-').replace(/\s+/g, '-').toUpperCase();
     const cleanCity = city.trim() || 'Pune';
     const cleanAddress = address.trim() || (cleanCity ? `${cleanCity}, India` : 'Residential Society');
-    const cleanPincode = pincode.trim() || '000000';
+    const cleanPincode = pincode.trim() || '411014';
 
     const res = await registerSociety({
       societyName: societyName.trim(),
@@ -167,7 +200,7 @@ export const LoginPage = () => {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className="w-full pl-9 pr-3 py-2.5 text-xs bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-teal-600 focus:outline-hidden"
-                    placeholder="name@society.com"
+                    placeholder="e.g. admin@nivasa.com or resident@society.org"
                   />
                 </div>
               </div>
@@ -184,7 +217,7 @@ export const LoginPage = () => {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     className="w-full pl-9 pr-3 py-2.5 text-xs bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-teal-600 focus:outline-hidden"
-                    placeholder="••••••••"
+                    placeholder="Enter your registered account password"
                   />
                 </div>
               </div>
@@ -226,22 +259,45 @@ export const LoginPage = () => {
                       type="text"
                       required
                       value={societyName}
-                      onChange={(e) => setSocietyName(e.target.value)}
-                      placeholder="e.g. Green Valley Heights"
+                      onChange={(e) => handleSocietyNameChange(e.target.value)}
+                      placeholder="e.g. Emerald Heights Co-operative Housing Society"
                       className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-teal-600 focus:outline-hidden"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">Society Code * (Unique)</label>
-                    <input
-                      type="text"
-                      required
-                      value={societyCode}
-                      onChange={(e) => setSocietyCode(e.target.value)}
-                      placeholder="e.g. GVH-01"
-                      className="w-full px-3 py-2 text-xs font-mono font-bold uppercase bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-teal-600 focus:outline-hidden"
-                    />
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
+                        <span>Society Code</span>
+                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                          <Sparkles className="w-2.5 h-2.5" /> Auto-Generated
+                        </span>
+                      </label>
+                      <button
+                        type="button"
+                        onClick={handleRegenerateCode}
+                        className="text-[11px] font-bold text-teal-700 hover:text-teal-900 flex items-center gap-1 transition cursor-pointer"
+                        title="Generate a new unique society code"
+                      >
+                        <RefreshCw className="w-3 h-3" /> Regenerate
+                      </button>
+                    </div>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        required
+                        value={societyCode}
+                        onChange={(e) => {
+                          setIsCodeCustomized(true);
+                          setSocietyCode(e.target.value.toUpperCase());
+                        }}
+                        placeholder="Auto-generated e.g. EHC-8421"
+                        className="w-full px-3 py-2 text-xs font-mono font-bold uppercase bg-slate-50 border border-teal-300 rounded-xl focus:ring-2 focus:ring-teal-600 focus:outline-hidden text-teal-900 tracking-wider shadow-inner"
+                      />
+                    </div>
+                    <p className="text-[10px] text-slate-400 mt-1">
+                      Unique society identifier automatically assigned. You can keep it or customize.
+                    </p>
                   </div>
                 </div>
 
@@ -253,7 +309,7 @@ export const LoginPage = () => {
                       required
                       value={city}
                       onChange={(e) => setCity(e.target.value)}
-                      placeholder="e.g. Pune"
+                      placeholder="e.g. Pune, Mumbai, Bengaluru"
                       className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-teal-600 focus:outline-hidden"
                     />
                   </div>
@@ -266,7 +322,7 @@ export const LoginPage = () => {
                       type="text"
                       value={pincode}
                       onChange={(e) => setPincode(e.target.value)}
-                      placeholder="e.g. 411014"
+                      placeholder="e.g. 411014 (6-digit PIN)"
                       className="w-full px-3 py-2 text-xs font-mono bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-teal-600 focus:outline-hidden"
                     />
                   </div>
@@ -280,7 +336,7 @@ export const LoginPage = () => {
                     type="text"
                     value={address}
                     onChange={(e) => setAddress(e.target.value)}
-                    placeholder="e.g. Plot 45, Nagar Road, Viman Nagar"
+                    placeholder="e.g. Survey No. 42/1, Baner-Pashan Link Road, Baner"
                     className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-teal-600 focus:outline-hidden"
                   />
                 </div>
@@ -299,7 +355,7 @@ export const LoginPage = () => {
                         required
                         value={adminName}
                         onChange={(e) => setAdminName(e.target.value)}
-                        placeholder="e.g. Rajesh Sharma"
+                        placeholder="e.g. Rajesh K. Sharma"
                         className="w-full pl-8 pr-3 py-2 text-xs bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-teal-600 focus:outline-hidden"
                       />
                     </div>
@@ -313,7 +369,7 @@ export const LoginPage = () => {
                         type="tel"
                         value={adminPhone}
                         onChange={(e) => setAdminPhone(e.target.value)}
-                        placeholder="+91 98230 00000"
+                        placeholder="e.g. +91 98230 45678"
                         className="w-full pl-8 pr-3 py-2 text-xs font-mono bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-teal-600 focus:outline-hidden"
                       />
                     </div>
@@ -330,7 +386,7 @@ export const LoginPage = () => {
                         required
                         value={adminEmail}
                         onChange={(e) => setAdminEmail(e.target.value)}
-                        placeholder="admin@society.com"
+                        placeholder="e.g. rajesh.sharma@emeraldheights.in"
                         className="w-full pl-8 pr-3 py-2 text-xs bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-teal-600 focus:outline-hidden"
                       />
                     </div>
@@ -345,7 +401,7 @@ export const LoginPage = () => {
                         required
                         value={adminPassword}
                         onChange={(e) => setAdminPassword(e.target.value)}
-                        placeholder="Create strong password"
+                        placeholder="Min. 8 characters (e.g. SecurePass#2026)"
                         className="w-full pl-8 pr-3 py-2 text-xs bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-teal-600 focus:outline-hidden"
                       />
                     </div>

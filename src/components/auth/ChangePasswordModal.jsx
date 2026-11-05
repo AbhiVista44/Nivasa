@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   KeyRound,
   Lock,
@@ -81,36 +82,37 @@ export const ChangePasswordModal = ({ isOpen, onClose }) => {
     onClose();
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs animate-fade-in">
-      <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 max-w-md w-full overflow-hidden relative">
+  const modalContent = (
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6 bg-slate-950/70 backdrop-blur-xs animate-fade-in overflow-y-auto">
+      <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 max-w-md w-full max-h-[90vh] overflow-y-auto relative my-auto">
         
         {/* Header */}
-        <div className="bg-gradient-to-r from-teal-900 via-teal-800 to-slate-900 p-6 text-white flex items-center justify-between">
+        <div className="bg-gradient-to-r from-teal-900 via-teal-800 to-slate-900 p-5 sm:p-6 text-white flex items-center justify-between sticky top-0 z-10">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-amber-400 text-slate-950 flex items-center justify-center shadow-md">
+            <div className="w-10 h-10 rounded-2xl bg-amber-400 text-slate-950 flex items-center justify-center shadow-md shrink-0">
               <KeyRound className="w-5 h-5 stroke-[2.2]" />
             </div>
             <div>
-              <h3 className="font-bold text-base font-display text-white">
+              <h3 className="font-bold text-base font-display text-white leading-tight">
                 Change Password
               </h3>
-              <p className="text-xs text-teal-200/90">
+              <p className="text-xs text-teal-200/90 mt-0.5">
                 Update your account login security
               </p>
             </div>
           </div>
 
           <button
+            type="button"
             onClick={handleClose}
-            className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition"
+            className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition shrink-0"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Content */}
-        <div className="p-6">
+        <div className="p-5 sm:p-6">
           {success ? (
             <div className="text-center py-6 space-y-3">
               <div className="w-14 h-14 rounded-full bg-emerald-100 text-emerald-600 mx-auto flex items-center justify-center">
@@ -254,5 +256,9 @@ export const ChangePasswordModal = ({ isOpen, onClose }) => {
       </div>
     </div>
   );
+
+  return typeof document !== 'undefined'
+    ? createPortal(modalContent, document.body)
+    : modalContent;
 };
 

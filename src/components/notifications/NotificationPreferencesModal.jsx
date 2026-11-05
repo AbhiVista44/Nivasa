@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useSocket } from '../../context/SocketContext';
 import {
   Volume2,
@@ -31,9 +32,9 @@ export const NotificationPreferencesModal = ({ onClose }) => {
     }, 800);
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in">
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden border border-slate-200">
+  const modalContent = (
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in overflow-y-auto">
+      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden border border-slate-200 my-auto">
         
         {/* Header */}
         <div className="bg-gradient-to-r from-teal-900 to-slate-900 p-5 text-white flex items-center justify-between">
@@ -167,4 +168,8 @@ export const NotificationPreferencesModal = ({ onClose }) => {
       </div>
     </div>
   );
+
+  return typeof document !== 'undefined'
+    ? createPortal(modalContent, document.body)
+    : modalContent;
 };

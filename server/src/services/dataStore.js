@@ -75,6 +75,44 @@ class DataStore {
     return rest;
   }
 
+  async changePassword(userId, currentPassword, newPassword) {
+    await this.ensureSeeded();
+
+    if (this.isMongoConnected()) {
+      const user = await User.findById(userId);
+      if (!user) {
+        throw new Error('User not found.');
+      }
+
+      const isMatch = await user.comparePassword(currentPassword);
+      if (!isMatch) {
+        throw new Error('Current password does not match.');
+      }
+
+      user.password = newPassword;
+      await user.save();
+      return true;
+    }
+
+    // In-memory mode
+    const user = this.users.find(u => u._id.toString() === userId.toString());
+    if (!user) {
+      throw new Error('User not found.');
+    }
+
+    const isMatch = user.passwordHash
+      ? await bcrypt.compare(currentPassword, user.passwordHash)
+      : user.password === currentPassword;
+
+    if (!isMatch) {
+      throw new Error('Current password does not match.');
+    }
+
+    user.password = newPassword;
+    user.passwordHash = bcrypt.hashSync(newPassword, 10);
+    return true;
+  }
+
   async getSocieties() {
     if (this.isMongoConnected()) {
       return await Society.find({ status: 'active' });

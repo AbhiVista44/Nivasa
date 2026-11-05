@@ -29,15 +29,16 @@ export const verifyToken = async (req, res, next) => {
 };
 
 export const requireRoles = (...roles) => {
+  const allowedRoles = roles.flat();
   return (req, res, next) => {
     if (!req.user) {
       return res.status(401).json({ success: false, message: 'Unauthenticated user.' });
     }
 
-    if (!roles.includes(req.user.role)) {
+    if (!allowedRoles.includes(req.user.role)) {
       return res.status(403).json({
         success: false,
-        message: `Forbidden: Access restricted to roles [${roles.join(', ')}]. Your role is '${req.user.role}'.`
+        message: `Forbidden: Access restricted to roles [${allowedRoles.join(', ')}]. Your role is '${req.user.role}'.`
       });
     }
 
@@ -47,9 +48,9 @@ export const requireRoles = (...roles) => {
 
 export const requireTenant = (req, res, next) => {
   const headerSocietyId = req.headers['x-society-id'];
-  if (headerSocietyId && req.user.role !== 'admin') {
-    if (req.user.societyId.toString() !== headerSocietyId.toString()) {
-      return res.status(403).json({ success: false, message: 'Cross-tenant access forbidden.' });
+  if (headerSocietyId && req.user.role !== 'superadmin') {
+    if (req.user.societyId && req.user.societyId.toString() !== headerSocietyId.toString()) {
+      return res.status(403).json({ success: false, message: 'Cross-tenant access forbidden. You can only view and manage your own society.' });
     }
   }
   next();

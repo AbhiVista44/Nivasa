@@ -9,7 +9,7 @@ const router = express.Router();
 // 1. Get all notices (resident sees published only scoped by wing; admin sees all)
 router.get('/', verifyToken, async (req, res) => {
   try {
-    const societyId = req.headers['x-society-id'] || req.user.societyId;
+    const societyId = (req.user.role === 'superadmin' && req.headers['x-society-id']) || req.user.societyId;
     const { type, search } = req.query;
     const filter = { type, search };
 
@@ -39,9 +39,9 @@ router.get('/', verifyToken, async (req, res) => {
 });
 
 // 2. Create a notice (admin only)
-router.post('/', verifyToken, requireRoles(['admin']), async (req, res) => {
+router.post('/', verifyToken, requireRoles('admin'), async (req, res) => {
   try {
-    const societyId = req.headers['x-society-id'] || req.user.societyId;
+    const societyId = (req.user.role === 'superadmin' && req.headers['x-society-id']) || req.user.societyId;
     const { title, body, type, targetWing, scheduledAt } = req.body;
 
     if (!title || !body || !type) {
@@ -97,9 +97,9 @@ router.patch('/:id/read', verifyToken, async (req, res) => {
 });
 
 // 4. Update notice (admin only)
-router.put('/:id', verifyToken, requireRoles(['admin']), async (req, res) => {
+router.put('/:id', verifyToken, requireRoles('admin'), async (req, res) => {
   try {
-    const societyId = req.headers['x-society-id'] || req.user.societyId;
+    const societyId = (req.user.role === 'superadmin' && req.headers['x-society-id']) || req.user.societyId;
     const { title, body, type, targetWing, isPublished, scheduledAt } = req.body;
     const updated = await dataStore.updateNotice(req.params.id, {
       title, body, type, targetWing, isPublished, scheduledAt,
@@ -126,9 +126,9 @@ router.put('/:id', verifyToken, requireRoles(['admin']), async (req, res) => {
 });
 
 // 5. Delete notice (admin only)
-router.delete('/:id', verifyToken, requireRoles(['admin']), async (req, res) => {
+router.delete('/:id', verifyToken, requireRoles('admin'), async (req, res) => {
   try {
-    const societyId = req.headers['x-society-id'] || req.user.societyId;
+    const societyId = (req.user.role === 'superadmin' && req.headers['x-society-id']) || req.user.societyId;
     const deleted = await dataStore.deleteNotice(req.params.id);
     if (!deleted) return res.status(404).json({ success: false, message: 'Notice not found.' });
 

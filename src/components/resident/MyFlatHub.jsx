@@ -4,8 +4,10 @@ import api from '../../services/api';
 import {
   Plus,
   Trash2,
-  CheckCircle2
+  CheckCircle2,
+  KeyRound
 } from 'lucide-react';
+import { ChangePasswordModal } from '../auth/ChangePasswordModal';
 
 export const MyFlatHub = () => {
   const { user, society } = useAuth();
@@ -13,6 +15,7 @@ export const MyFlatHub = () => {
 
   // Add Family Member Modal State
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   const [newMemberName, setNewMemberName] = useState('');
   const [newMemberRelation, setNewMemberRelation] = useState('Spouse');
   const [newMemberPhone, setNewMemberPhone] = useState('');
@@ -147,9 +150,9 @@ export const MyFlatHub = () => {
 
         <div className="divide-y divide-slate-100">
           {/* Primary Resident Card */}
-          <div className="py-3 flex items-center justify-between text-xs">
+          <div className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-full bg-teal-100 text-teal-800 font-bold flex items-center justify-center text-sm">
+              <div className="w-9 h-9 rounded-full bg-teal-100 text-teal-800 font-bold flex items-center justify-center text-sm shrink-0">
                 {user?.name?.charAt(0) || 'R'}
               </div>
               <div>
@@ -157,11 +160,23 @@ export const MyFlatHub = () => {
                 <p className="text-slate-500 text-[11px]">{flatData?.primaryResident?.email || user?.email}</p>
               </div>
             </div>
-            <div className="text-right">
-              <span className="bg-teal-100 text-teal-800 font-bold px-2 py-0.5 rounded-full text-[10px] uppercase">
-                Primary Resident
-              </span>
-              <p className="font-mono text-slate-500 text-[11px] mt-1">{flatData?.primaryResident?.phone || user?.phone}</p>
+
+            <div className="flex items-center gap-3 self-end sm:self-auto">
+              <div className="text-right">
+                <span className="bg-teal-100 text-teal-800 font-bold px-2 py-0.5 rounded-full text-[10px] uppercase">
+                  Primary Resident
+                </span>
+                <p className="font-mono text-slate-500 text-[11px] mt-0.5">{flatData?.primaryResident?.phone || user?.phone}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsPasswordModalOpen(true)}
+                className="px-3 py-1.5 rounded-xl border border-teal-200 bg-teal-50 hover:bg-teal-100 text-teal-800 font-bold text-xs flex items-center gap-1.5 transition shrink-0"
+                title="Change initial password set by society admin"
+              >
+                <KeyRound className="w-3.5 h-3.5" />
+                Change Password
+              </button>
             </div>
           </div>
 
@@ -265,6 +280,14 @@ export const MyFlatHub = () => {
             </form>
           </div>
         </div>
+      )}
+
+      {/* Change Password Modal */}
+      {isPasswordModalOpen && (
+        <ChangePasswordModal
+          isOpen={isPasswordModalOpen}
+          onClose={() => setIsPasswordModalOpen(false)}
+        />
       )}
 
     </div>

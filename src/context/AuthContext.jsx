@@ -120,7 +120,23 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // Ensure user is always strictly locked to their own society
+  useEffect(() => {
+    if (user && user.role !== 'superadmin' && user.societyId && societies.length > 0) {
+      if (!society || society._id !== user.societyId) {
+        const ownSociety = societies.find(s => s._id === user.societyId);
+        if (ownSociety) {
+          setSociety(ownSociety);
+        }
+      }
+    }
+  }, [user, society, societies]);
+
   const switchSociety = (targetSocietyId) => {
+    if (user?.role !== 'superadmin') {
+      console.warn('Cross-society switching is disabled. Each admin and resident is restricted to their own society.');
+      return;
+    }
     const found = societies.find(s => s._id === targetSocietyId);
     if (found) {
       setSociety(found);

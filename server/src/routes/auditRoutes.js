@@ -5,9 +5,9 @@ import { verifyToken, requireRoles } from '../middleware/auth.js';
 const router = express.Router();
 
 // 1. Get society audit logs (admin only)
-router.get('/', verifyToken, requireRoles(['admin']), async (req, res) => {
+router.get('/', verifyToken, requireRoles('admin'), async (req, res) => {
   try {
-    const societyId = req.headers['x-society-id'] || req.user.societyId;
+    const societyId = (req.user.role === 'superadmin' && req.headers['x-society-id']) || req.user.societyId;
     const { severity, action, search, limit } = req.query;
 
     const logs = await dataStore.getAuditLogs(

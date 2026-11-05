@@ -182,3 +182,48 @@ export const getMe = async (req, res) => {
     res.status(500).json({ success: false, message: 'Failed to retrieve profile.' });
   }
 };
+
+export const changePassword = async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    const userId = req.user.id || req.user._id;
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide both current password and new password.',
+      });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: 'New password must be at least 6 characters long.',
+      });
+    }
+
+    await dataStore.changePassword(userId, currentPassword, newPassword);
+
+    await dataStore.logAction({
+      societyId: req.user.societyId,
+      actorId: userId,
+      actorName: req.user.name,
+      actorRole: req.user.role,
+      action: 'USER_PASSWORD_CHANGED',
+      targetType: 'User',
+      targetId: userId.toString(),
+      details: { email: req.user.email, role: req.user.role },
+    });
+
+    res.json({
+      success: true,
+      message: 'Password changed successfully! You can now use your new password.',
+    });
+  } catch (error) {
+    console.error('Change password error:', error);
+    res.status(400).json({
+      success: false,
+      message: error.message || 'Failed to change password. Please check your current password.',
+    });
+  }
+};

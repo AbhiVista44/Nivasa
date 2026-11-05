@@ -3,22 +3,24 @@ import { useAuth } from '../../context/AuthContext';
 import { useSocket } from '../../context/SocketContext';
 import { NotificationTray } from '../notifications/NotificationTray';
 import { NotificationPreferencesModal } from '../notifications/NotificationPreferencesModal';
+import { ChangePasswordModal } from '../auth/ChangePasswordModal';
 import {
   Building2,
   ChevronDown,
   Bell,
   LogOut,
   MapPin,
-  Check
+  Check,
+  KeyRound
 } from 'lucide-react';
 
 export const Navbar = () => {
-  const { user, society, societies, role, switchSociety, logout } = useAuth();
+  const { user, society, role, logout } = useAuth();
   const { unreadCount, connected } = useSocket();
-  const [societyDropdownOpen, setSocietyDropdownOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [preferencesOpen, setPreferencesOpen] = useState(false);
+  const [changePasswordOpen, setChangePasswordOpen] = useState(false);
 
   return (
     <header className="sticky top-0 z-40 w-full bg-white/95 backdrop-blur border-b border-slate-200 shadow-xs">
@@ -42,55 +44,16 @@ export const Navbar = () => {
 
           <div className="h-6 w-[1px] bg-slate-200 hidden md:block" />
 
-          {/* Active Society Indicator / Switcher */}
-          <div className="relative">
-            <button
-              onClick={() => {
-                if (societies.length > 1) {
-                  setSocietyDropdownOpen(!societyDropdownOpen);
-                }
-              }}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-200 bg-slate-50/80 hover:bg-slate-100 text-xs text-slate-700 font-medium transition"
-              title="Active Society"
-            >
-              <MapPin className="w-3.5 h-3.5 text-teal-600" />
-              <span className="font-semibold max-w-[160px] truncate">{society?.name || 'Nivasa Society'}</span>
-              {society?.code && (
-                <span className="bg-teal-100 text-teal-800 text-[10px] px-1.5 py-0.5 rounded font-mono font-bold">
-                  {society.code}
-                </span>
-              )}
-              {societies.length > 1 && (
-                <ChevronDown className="w-3 h-3 text-slate-400 ml-0.5" />
-              )}
-            </button>
-
-            {societyDropdownOpen && societies.length > 1 && (
-              <div className="absolute left-0 mt-2 w-72 bg-white rounded-xl shadow-xl border border-slate-200 py-2 z-50 animate-in fade-in slide-in-from-top-1">
-                <div className="px-3 py-1.5 border-b border-slate-100">
-                  <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
-                    Select Society / Tenant
-                  </p>
-                </div>
-                {societies.map((s) => (
-                  <button
-                    key={s._id}
-                    onClick={() => {
-                      switchSociety(s._id);
-                      setSocietyDropdownOpen(false);
-                    }}
-                    className="w-full text-left px-3 py-2 text-xs flex items-center justify-between hover:bg-teal-50 transition"
-                  >
-                    <div>
-                      <p className="font-semibold text-slate-800">{s.name}</p>
-                      <p className="text-[11px] text-slate-500">{s.city} • {s.totalFlats || 0} flats</p>
-                    </div>
-                    {society?._id === s._id && (
-                      <Check className="w-4 h-4 text-teal-600 shrink-0" />
-                    )}
-                  </button>
-                ))}
-              </div>
+          {/* Active Society Indicator (Locked to user's registered society) */}
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-200 bg-slate-50/80 text-xs text-slate-700 font-medium">
+            <MapPin className="w-3.5 h-3.5 text-teal-600" />
+            <span className="font-semibold max-w-[200px] truncate" title={society?.name || user?.societyName}>
+              {society?.name || user?.societyName || 'Nivasa Society'}
+            </span>
+            {society?.code && (
+              <span className="bg-teal-100 text-teal-800 text-[10px] px-1.5 py-0.5 rounded font-mono font-bold">
+                {society.code}
+              </span>
             )}
           </div>
         </div>
@@ -187,6 +150,17 @@ export const Navbar = () => {
 
                 <button
                   onClick={() => {
+                    setUserDropdownOpen(false);
+                    setChangePasswordOpen(true);
+                  }}
+                  className="w-full text-left px-4 py-2.5 text-xs text-slate-700 hover:bg-slate-50 flex items-center gap-2 transition font-semibold cursor-pointer border-b border-slate-100"
+                >
+                  <KeyRound className="w-4 h-4 text-teal-600" />
+                  Change Password
+                </button>
+
+                <button
+                  onClick={() => {
                     logout();
                     setUserDropdownOpen(false);
                   }}
@@ -198,6 +172,13 @@ export const Navbar = () => {
               </div>
             )}
           </div>
+
+          {changePasswordOpen && (
+            <ChangePasswordModal
+              isOpen={changePasswordOpen}
+              onClose={() => setChangePasswordOpen(false)}
+            />
+          )}
 
         </div>
       </div>

@@ -26,9 +26,9 @@ router.get('/', verifyToken, async (req, res) => {
 });
 
 // 2. Add vendor (admin only)
-router.post('/', verifyToken, requireRoles(['admin']), async (req, res) => {
+router.post('/', verifyToken, requireRoles('admin'), async (req, res) => {
   try {
-    const societyId = req.headers['x-society-id'] || req.user.societyId;
+    const societyId = (req.user.role === 'superadmin' && req.headers['x-society-id']) || req.user.societyId;
     const {
       name, businessName, category, phone, emergencyPhone, email, password,
       serviceAreas, licenseNumber, description, tags, isEmergencyContact,
@@ -85,9 +85,9 @@ router.post('/', verifyToken, requireRoles(['admin']), async (req, res) => {
 });
 
 // 3. Update vendor profile (admin only)
-router.put('/:id', verifyToken, requireRoles(['admin']), async (req, res) => {
+router.put('/:id', verifyToken, requireRoles('admin'), async (req, res) => {
   try {
-    const societyId = req.headers['x-society-id'] || req.user.societyId;
+    const societyId = (req.user.role === 'superadmin' && req.headers['x-society-id']) || req.user.societyId;
     const updated = await dataStore.updateVendor(req.params.id, req.body);
     if (!updated) return res.status(404).json({ success: false, message: 'Vendor not found.' });
 
@@ -111,9 +111,9 @@ router.put('/:id', verifyToken, requireRoles(['admin']), async (req, res) => {
 });
 
 // 4. Toggle vendor active/inactive (admin only)
-router.patch('/:id/status', verifyToken, requireRoles(['admin']), async (req, res) => {
+router.patch('/:id/status', verifyToken, requireRoles('admin'), async (req, res) => {
   try {
-    const societyId = req.headers['x-society-id'] || req.user.societyId;
+    const societyId = (req.user.role === 'superadmin' && req.headers['x-society-id']) || req.user.societyId;
     const { status } = req.body;
     if (!['active', 'inactive'].includes(status)) {
       return res.status(400).json({ success: false, message: 'Status must be active or inactive.' });
@@ -141,7 +141,7 @@ router.patch('/:id/status', verifyToken, requireRoles(['admin']), async (req, re
 });
 
 // 5. Rate a vendor (resident only)
-router.post('/:id/rate', verifyToken, requireRoles(['resident']), async (req, res) => {
+router.post('/:id/rate', verifyToken, requireRoles('resident'), async (req, res) => {
   try {
     const { score, review } = req.body;
     if (!score || score < 1 || score > 5) {

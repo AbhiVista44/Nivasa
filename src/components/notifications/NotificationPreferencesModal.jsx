@@ -4,7 +4,7 @@ import {
   Volume2,
   VolumeX,
   Bell,
-  QrCode,
+  KeyRound,
   Wrench,
   Package,
   Megaphone,
@@ -108,7 +108,7 @@ export const NotificationPreferencesModal = ({ onClose }) => {
             </p>
 
             {[
-              { key: 'visitorAlerts', label: 'Visitor & Guest Arrivals', desc: 'Instant gate pass verification & arrival popups', icon: QrCode, color: 'text-amber-600' },
+              { key: 'visitorAlerts', label: 'Visitor & Guest Arrivals', desc: 'Instant gate pass verification & arrival popups', icon: KeyRound, color: 'text-amber-600' },
               { key: 'deliveryAlerts', label: 'Delivery Arrivals', desc: 'Courier packages waiting at Main Gate Post', icon: Package, color: 'text-emerald-600' },
               { key: 'complaintAlerts', label: 'Maintenance Workflows', desc: 'Vendor assignments, visits, and status updates', icon: Wrench, color: 'text-teal-600' },
               { key: 'noticeAlerts', label: 'Notice Board Broadcasts', desc: 'Urgent announcements and society circulars', icon: Megaphone, color: 'text-indigo-600' },

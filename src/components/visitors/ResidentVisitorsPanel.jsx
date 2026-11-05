@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
-  QrCode,
+  KeyRound,
   UserPlus,
   Search,
   Calendar,
@@ -103,7 +103,7 @@ export const ResidentVisitorsPanel = () => {
             Visitor Gate Passes
           </h1>
           <p className="text-xs text-teal-100/80 mt-1 max-w-lg">
-            Pre-authorize your guests with QR passes and 6-digit access codes for swift, seamless gate clearance.
+            Pre-authorize your guests with 6-digit access codes for swift, seamless gate clearance.
           </p>
         </div>
 
@@ -219,7 +219,7 @@ export const ResidentVisitorsPanel = () => {
       ) : filteredVisitors.length === 0 ? (
         <div className="bg-white rounded-3xl border border-slate-200 p-12 text-center space-y-3">
           <div className="w-12 h-12 rounded-2xl bg-teal-50 text-teal-700 flex items-center justify-center mx-auto">
-            <QrCode className="w-6 h-6" />
+            <KeyRound className="w-6 h-6" />
           </div>
           <h3 className="text-base font-bold font-display text-slate-900">
             No visitor passes found in this section
@@ -295,7 +295,7 @@ export const ResidentVisitorsPanel = () => {
                     className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-teal-50 hover:bg-teal-100 text-teal-800 font-bold text-xs border border-teal-200 transition"
                   >
                     <Eye className="w-3.5 h-3.5" />
-                    View QR Pass
+                    View Gate Pass
                   </button>
                 </div>
               </div>

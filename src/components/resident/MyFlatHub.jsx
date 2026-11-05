@@ -121,154 +121,78 @@ export const MyFlatHub = () => {
               Floor {flatData?.floor || '—'} • {flatData?.type || '—'} • {flatData?.areaSqFt ? `${flatData.areaSqFt} sq.ft carpet area` : 'Area not specified'}
             </p>
           </div>
-
-          <div className="bg-slate-900/80 backdrop-blur-md p-4 rounded-2xl border border-teal-600/50 space-y-2 shrink-0 text-xs">
-            <div className="flex items-center justify-between gap-4">
-              <span className="text-slate-400">Allocated Parking:</span>
-              <span className="font-mono font-bold text-amber-300">{flatData?.allocatedParkingSlot || '—'}</span>
-            </div>
-            <div className="flex items-center justify-between gap-4">
-              <span className="text-slate-400">Intercom Ext:</span>
-              <span className="font-mono font-bold text-white">{flatData?.intercomNumber || '—'}</span>
-            </div>
-            <div className="flex items-center justify-between gap-4">
-              <span className="text-slate-400">Gate Pass Code:</span>
-              <span className="font-mono font-bold text-emerald-400">{flatData?.gatePassCode ? `Active (#${flatData.gatePassCode})` : '—'}</span>
-            </div>
-          </div>
         </div>
       </div>
 
-      {/* Main Split: Family Members & Authorized Vehicles */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
-        {/* Family Members Management (2 Cols) */}
-        <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-base font-bold text-slate-900 font-display">
-                Registered Family Members ({flatData?.familyMembers?.length || 0})
-              </h2>
-              <p className="text-xs text-slate-500">
-                Authorized for digital gate passes, amenity access, and deliveries
-              </p>
-            </div>
-
-            <button
-              onClick={() => setIsAddModalOpen(true)}
-              className="flex items-center gap-1.5 px-3.5 py-2 bg-teal-800 hover:bg-teal-700 text-white font-bold rounded-xl text-xs transition shadow-xs"
-            >
-              <Plus className="w-4 h-4" />
-              Add Member
-            </button>
+      {/* Family Members Management */}
+      <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-base font-bold text-slate-900 font-display">
+              Registered Family Members ({flatData?.familyMembers?.length || 0})
+            </h2>
+            <p className="text-xs text-slate-500">
+              Authorized for digital gate passes, amenity access, and deliveries
+            </p>
           </div>
 
-          <div className="divide-y divide-slate-100">
-            {/* Primary Resident Card */}
-            <div className="py-3 flex items-center justify-between text-xs">
+          <button
+            onClick={() => setIsAddModalOpen(true)}
+            className="flex items-center gap-1.5 px-3.5 py-2 bg-teal-800 hover:bg-teal-700 text-white font-bold rounded-xl text-xs transition shadow-xs"
+          >
+            <Plus className="w-4 h-4" />
+            Add Member
+          </button>
+        </div>
+
+        <div className="divide-y divide-slate-100">
+          {/* Primary Resident Card */}
+          <div className="py-3 flex items-center justify-between text-xs">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-full bg-teal-100 text-teal-800 font-bold flex items-center justify-center text-sm">
+                {user?.name?.charAt(0) || 'R'}
+              </div>
+              <div>
+                <p className="font-bold text-slate-900">{flatData?.primaryResident?.name || user?.name}</p>
+                <p className="text-slate-500 text-[11px]">{flatData?.primaryResident?.email || user?.email}</p>
+              </div>
+            </div>
+            <div className="text-right">
+              <span className="bg-teal-100 text-teal-800 font-bold px-2 py-0.5 rounded-full text-[10px] uppercase">
+                Primary Resident
+              </span>
+              <p className="font-mono text-slate-500 text-[11px] mt-1">{flatData?.primaryResident?.phone || user?.phone}</p>
+            </div>
+          </div>
+
+          {/* Added Family Members */}
+          {flatData?.familyMembers && flatData.familyMembers.map((member, idx) => (
+            <div key={idx} className="py-3 flex items-center justify-between text-xs hover:bg-slate-50/60 transition px-1 rounded-xl">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-full bg-teal-100 text-teal-800 font-bold flex items-center justify-center text-sm">
-                  {user?.name?.charAt(0) || 'R'}
+                <div className="w-9 h-9 rounded-full bg-slate-100 text-slate-700 font-bold flex items-center justify-center text-xs">
+                  {member.name?.charAt(0)}
                 </div>
                 <div>
-                  <p className="font-bold text-slate-900">{flatData?.primaryResident?.name || user?.name}</p>
-                  <p className="text-slate-500 text-[11px]">{flatData?.primaryResident?.email || user?.email}</p>
+                  <p className="font-bold text-slate-900">{member.name}</p>
+                  <span className="bg-slate-100 text-slate-600 font-semibold px-2 py-0.5 rounded text-[10px]">
+                    {member.relation}
+                  </span>
                 </div>
               </div>
-              <div className="text-right">
-                <span className="bg-teal-100 text-teal-800 font-bold px-2 py-0.5 rounded-full text-[10px] uppercase">
-                  Primary Resident
-                </span>
-                <p className="font-mono text-slate-500 text-[11px] mt-1">{flatData?.primaryResident?.phone || user?.phone}</p>
+
+              <div className="flex items-center gap-3">
+                <span className="font-mono text-slate-600 text-xs">{member.phone || 'No phone'}</span>
+                <button
+                  onClick={() => handleRemoveFamilyMember(member.name)}
+                  className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition"
+                  title="Remove Member"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
               </div>
             </div>
-
-            {/* Added Family Members */}
-            {flatData?.familyMembers && flatData.familyMembers.map((member, idx) => (
-              <div key={idx} className="py-3 flex items-center justify-between text-xs hover:bg-slate-50/60 transition px-1 rounded-xl">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-full bg-slate-100 text-slate-700 font-bold flex items-center justify-center text-xs">
-                    {member.name?.charAt(0)}
-                  </div>
-                  <div>
-                    <p className="font-bold text-slate-900">{member.name}</p>
-                    <span className="bg-slate-100 text-slate-600 font-semibold px-2 py-0.5 rounded text-[10px]">
-                      {member.relation}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-3">
-                  <span className="font-mono text-slate-600 text-xs">{member.phone || 'No phone'}</span>
-                  <button
-                    onClick={() => handleRemoveFamilyMember(member.name)}
-                    className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition"
-                    title="Remove Member"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
+          ))}
         </div>
-
-        {/* Vehicles & Emergency Society Helpline (1 Col) */}
-        <div className="space-y-6">
-          
-          {/* Registered Vehicles */}
-          <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs space-y-3">
-            <div className="flex items-center justify-between">
-              <h3 className="text-sm font-bold text-slate-900 font-display">
-                Authorized Vehicles
-              </h3>
-              <span className="text-[10px] font-bold text-teal-800 bg-teal-50 px-2 py-0.5 rounded">
-                RFID Synced
-              </span>
-            </div>
-
-            <div className="space-y-2">
-              {flatData?.vehicles && flatData.vehicles.length > 0 ? (
-                flatData.vehicles.map((v, idx) => (
-                  <div key={idx} className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs flex items-center justify-between">
-                    <div>
-                      <p className="font-bold text-slate-900">{v.model}</p>
-                      <p className="text-[11px] text-slate-500">{v.type}</p>
-                    </div>
-                    <span className="font-mono font-bold text-amber-900 bg-amber-100 px-2 py-0.5 rounded text-[11px]">
-                      {v.regNumber}
-                    </span>
-                  </div>
-                ))
-              ) : (
-                <p className="text-xs text-slate-400 italic">No vehicles registered.</p>
-              )}
-            </div>
-          </div>
-
-          {/* Gate & Intercom Helplines */}
-          <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs space-y-3">
-            <h3 className="text-sm font-bold text-slate-900 font-display">
-              Gate & Society Helplines
-            </h3>
-            <div className="space-y-2 text-xs">
-              <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-200">
-                <span className="text-slate-600 font-medium">Main Gate Security 1</span>
-                <span className="font-mono font-bold text-teal-800">Ext: 1001</span>
-              </div>
-              <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-200">
-                <span className="text-slate-600 font-medium">Society Office Admin</span>
-                <span className="font-mono font-bold text-teal-800">Ext: 1100</span>
-              </div>
-              <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-200">
-                <span className="text-slate-600 font-medium">Emergency Medical Care</span>
-                <span className="font-mono font-bold text-rose-700">Ext: 108</span>
-              </div>
-            </div>
-          </div>
-
-        </div>
-
       </div>
 
       {/* Add Family Member Modal */}

@@ -196,7 +196,7 @@ export const LoginPage = () => {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className="w-full pl-9 pr-3 py-2.5 text-xs bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-teal-600 focus:outline-hidden"
-                    placeholder="e.g. admin@nivasa.com or resident@society.org"
+                    placeholder="Email address"
                   />
                 </div>
               </div>
@@ -213,7 +213,7 @@ export const LoginPage = () => {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     className="w-full pl-9 pr-3 py-2.5 text-xs bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-teal-600 focus:outline-hidden"
-                    placeholder="Enter your registered account password"
+                    placeholder="Password"
                   />
                 </div>
               </div>
@@ -256,7 +256,7 @@ export const LoginPage = () => {
                       required
                       value={societyName}
                       onChange={(e) => handleSocietyNameChange(e.target.value)}
-                      placeholder="e.g. Emerald Heights Co-operative Housing Society"
+                      placeholder="Full registered society name"
                       className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-teal-600 focus:outline-hidden"
                     />
                   </div>
@@ -288,7 +288,7 @@ export const LoginPage = () => {
                       required
                       value={city}
                       onChange={(e) => setCity(e.target.value)}
-                      placeholder="e.g. Pune, Mumbai, Bengaluru"
+                      placeholder="City"
                       className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-teal-600 focus:outline-hidden"
                     />
                   </div>
@@ -301,7 +301,7 @@ export const LoginPage = () => {
                       type="text"
                       value={pincode}
                       onChange={(e) => setPincode(e.target.value)}
-                      placeholder="e.g. 411014 (6-digit PIN)"
+                      placeholder="6-digit PIN code"
                       className="w-full px-3 py-2 text-xs font-mono bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-teal-600 focus:outline-hidden"
                     />
                   </div>
@@ -315,7 +315,7 @@ export const LoginPage = () => {
                     type="text"
                     value={address}
                     onChange={(e) => setAddress(e.target.value)}
-                    placeholder="e.g. Survey No. 42/1, Baner-Pashan Link Road, Baner"
+                    placeholder="Street address, landmark, area"
                     className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-teal-600 focus:outline-hidden"
                   />
                 </div>
@@ -334,7 +334,7 @@ export const LoginPage = () => {
                         required
                         value={adminName}
                         onChange={(e) => setAdminName(e.target.value)}
-                        placeholder="e.g. Rajesh K. Sharma"
+                        placeholder="Full name"
                         className="w-full pl-8 pr-3 py-2 text-xs bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-teal-600 focus:outline-hidden"
                       />
                     </div>
@@ -348,7 +348,7 @@ export const LoginPage = () => {
                         type="tel"
                         value={adminPhone}
                         onChange={(e) => setAdminPhone(e.target.value)}
-                        placeholder="e.g. +91 98230 45678"
+                        placeholder="Mobile number"
                         className="w-full pl-8 pr-3 py-2 text-xs font-mono bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-teal-600 focus:outline-hidden"
                       />
                     </div>
@@ -365,7 +365,7 @@ export const LoginPage = () => {
                         required
                         value={adminEmail}
                         onChange={(e) => setAdminEmail(e.target.value)}
-                        placeholder="e.g. rajesh.sharma@emeraldheights.in"
+                        placeholder="Email address"
                         className="w-full pl-8 pr-3 py-2 text-xs bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-teal-600 focus:outline-hidden"
                       />
                     </div>
@@ -380,7 +380,7 @@ export const LoginPage = () => {
                         required
                         value={adminPassword}
                         onChange={(e) => setAdminPassword(e.target.value)}
-                        placeholder="Min. 8 characters (e.g. SecurePass#2026)"
+                        placeholder="Password (min. 8 characters)"
                         className="w-full pl-8 pr-3 py-2 text-xs bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-teal-600 focus:outline-hidden"
                       />
                     </div>

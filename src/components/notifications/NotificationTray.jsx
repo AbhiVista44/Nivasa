@@ -4,7 +4,7 @@ import {
   Bell,
   Check,
   Trash2,
-  QrCode,
+  KeyRound,
   Wrench,
   Package,
   Megaphone,
@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 
 const CATEGORY_CONFIG = {
-  visitor: { label: 'Visitor', icon: QrCode, color: 'text-amber-600 bg-amber-50 border-amber-200' },
+  visitor: { label: 'Visitor', icon: KeyRound, color: 'text-amber-600 bg-amber-50 border-amber-200' },
   complaint: { label: 'Complaint', icon: Wrench, color: 'text-teal-600 bg-teal-50 border-teal-200' },
   delivery: { label: 'Delivery', icon: Package, color: 'text-emerald-600 bg-emerald-50 border-emerald-200' },
   notice: { label: 'Notice', icon: Megaphone, color: 'text-indigo-600 bg-indigo-50 border-indigo-200' },

@@ -10,7 +10,7 @@ import {
   Megaphone,
   Briefcase,
   History,
-  QrCode,
+  KeyRound,
   UserCheck,
   Building,
   AlertTriangle,
@@ -35,7 +35,7 @@ export const Sidebar = ({ activeTab, onSelectTab }) => {
     resident: [
       { id: 'home', label: 'My Flat & Family', icon: Building },
       { id: 'complaints', label: 'Complaints (+ Groq AI)', icon: Wrench, highlight: true },
-      { id: 'visitors', label: 'Visitor Gate Passes', icon: QrCode },
+      { id: 'visitors', label: 'Visitor Gate Passes', icon: KeyRound },
       { id: 'deliveries', label: 'Delivery Arrivals', icon: Package },
       { id: 'facilities', label: 'Book Amenities', icon: CalendarDays },
       { id: 'notices', label: 'Society Notices', icon: Megaphone },
@@ -44,7 +44,7 @@ export const Sidebar = ({ activeTab, onSelectTab }) => {
     ],
     security: [
       { id: 'gate-console', label: 'Gate Console', icon: ShieldCheck },
-      { id: 'scan-pass', label: 'Scan QR / Passcode', icon: QrCode },
+      { id: 'scan-pass', label: 'Passcode Verification', icon: KeyRound },
       { id: 'walk-in', label: 'Walk-In Registration', icon: UserCheck },
       { id: 'deliveries', label: 'Delivery Entry', icon: Package },
       { id: 'inside-roster', label: 'Inside Society (Live)', icon: Users, badge: 'Live' },

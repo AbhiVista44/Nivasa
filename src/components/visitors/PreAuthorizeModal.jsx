@@ -100,7 +100,7 @@ export const PreAuthorizeModal = ({ isOpen, onClose, onPassCreated }) => {
                 Pre-Authorize Visitor
               </h2>
               <p className="text-xs text-slate-500">
-                Generate instant QR gate pass & 6-digit passcode
+                Generate instant 6-digit gate passcode
               </p>
             </div>
           </div>
@@ -124,7 +124,7 @@ export const PreAuthorizeModal = ({ isOpen, onClose, onPassCreated }) => {
                 Gate Pass Generated!
               </h3>
               <p className="text-xs text-slate-500 max-w-xs mx-auto">
-                Share this digital pass or 6-digit PIN with your guest for fast entry clearance.
+                Share this 6-digit gate code with your guest for fast entry clearance.
               </p>
 
               <div className="pt-2">
@@ -282,12 +282,12 @@ export const PreAuthorizeModal = ({ isOpen, onClose, onPassCreated }) => {
                   {loading ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin" />
-                      Generating Pass & 6-Digit PIN…
+                      Generating 6-Digit Passcode…
                     </>
                   ) : (
                     <>
                       <ShieldCheck className="w-4 h-4" />
-                      Generate Pass & 6-Digit Code
+                      Generate 6-Digit Gate Pass
                     </>
                   )}
                 </button>

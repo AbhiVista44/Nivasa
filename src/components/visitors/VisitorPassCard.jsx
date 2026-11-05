@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
-import { QRCodeSVG } from 'qrcode.react';
 import {
-  QrCode,
+  KeyRound,
   Copy,
   Check,
   Share2,
@@ -21,13 +20,6 @@ export const VisitorPassCard = ({ pass, onRevoke, onClose }) => {
   const [copiedLink, setCopiedLink] = useState(false);
 
   if (!pass) return null;
-
-  const qrPayload = JSON.stringify({
-    passId: pass.visitorNumber,
-    code: pass.passcode,
-    flat: pass.flatNumber,
-    guest: pass.name,
-  });
 
   const handleCopyPasscode = () => {
     navigator.clipboard?.writeText(pass.passcode);
@@ -51,7 +43,7 @@ export const VisitorPassCard = ({ pass, onRevoke, onClose }) => {
       `👤 *Host:* ${pass.hostResidentName || 'Resident'}\n` +
       `🚗 *Vehicle:* ${pass.vehicleNumber || 'None'}\n` +
       `🕒 *Validity:* ${new Date(pass.expectedDate || Date.now()).toLocaleDateString()} (${pass.expectedTimeSlot || 'Anytime'})\n\n` +
-      `Show this code or QR at the security gate for fast entry!`
+      `Show this 6-digit code at the security gate for fast entry!`
     );
     window.open(`https://wa.me/?text=${text}`, '_blank');
   };
@@ -121,42 +113,33 @@ export const VisitorPassCard = ({ pass, onRevoke, onClose }) => {
           </div>
         </div>
 
-        {/* QR Code Centerpiece */}
-        <div className="bg-white rounded-2xl p-4 flex flex-col items-center justify-center shadow-lg my-3 border border-slate-200">
-          <div className="p-2 bg-white rounded-xl">
-            <QRCodeSVG
-              value={qrPayload}
-              size={170}
-              level="H"
-              includeMargin={false}
-              fgColor="#042f2e"
-            />
+        {/* 6-Digit Gate Passcode Centerpiece */}
+        <div className="bg-gradient-to-b from-slate-800/90 to-slate-900/95 rounded-2xl p-5 border border-amber-500/40 text-center shadow-lg my-3 relative overflow-hidden">
+          <div className="flex items-center justify-center gap-1.5 text-amber-400 mb-2">
+            <KeyRound className="w-4 h-4" />
+            <p className="text-xs uppercase font-bold tracking-wider">
+              6-Digit Gate Passcode
+            </p>
           </div>
-          <p className="text-[11px] font-medium text-slate-500 mt-2 flex items-center gap-1">
-            <QrCode className="w-3.5 h-3.5 text-teal-700" />
-            Scan at gate for instant barrier clearance
-          </p>
-        </div>
 
-        {/* 6-Digit Passcode Display */}
-        <div className="bg-slate-800/80 rounded-2xl p-3.5 border border-slate-700 text-center">
-          <p className="text-[10px] uppercase font-bold tracking-wider text-slate-400 mb-1.5">
-            Or Provide 6-Digit Gate Code
-          </p>
-          <div className="flex items-center justify-center gap-2 font-mono text-2xl font-black text-amber-300 tracking-widest">
-            {pass.passcode.split('').map((char, idx) => (
+          <div className="flex items-center justify-center gap-2 sm:gap-2.5 font-mono text-2xl sm:text-3xl font-black text-amber-300 tracking-widest my-3">
+            {pass.passcode?.split('').map((char, idx) => (
               <span
                 key={idx}
-                className="w-8 h-10 bg-slate-900 rounded-lg flex items-center justify-center border border-amber-500/40 shadow-inner"
+                className="w-9 h-11 sm:w-10 sm:h-12 bg-slate-950 rounded-xl flex items-center justify-center border-2 border-amber-500/50 shadow-inner text-amber-300"
               >
                 {char}
               </span>
             ))}
           </div>
 
+          <p className="text-[11px] text-slate-400 mb-3">
+            Provide this 6-digit code to security at the gate for fast entry clearance
+          </p>
+
           <button
             onClick={handleCopyPasscode}
-            className="mt-2.5 inline-flex items-center gap-1 text-[11px] font-semibold text-teal-300 hover:text-teal-200 transition"
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-teal-500/10 hover:bg-teal-500/20 text-teal-300 border border-teal-500/30 font-semibold text-xs transition"
           >
             {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
             {copied ? 'Passcode Copied!' : 'Copy 6-Digit PIN'}

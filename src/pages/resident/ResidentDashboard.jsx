@@ -3,7 +3,7 @@ import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
 import {
   Wrench,
-  QrCode,
+  KeyRound,
   Package,
   CalendarDays,
   ArrowRight,
@@ -91,8 +91,8 @@ export const ResidentDashboard = ({ activeTab, onNavigate }) => {
     },
     {
       title: 'Pre-Authorize Visitor',
-      desc: 'Generate instant QR pass & 6-digit gate code',
-      icon: QrCode,
+      desc: 'Generate instant 6-digit gate passcode',
+      icon: KeyRound,
       aiBadge: 'Gate Fast-Track',
       badgeColor: 'bg-amber-100 text-amber-800',
       action: () => onNavigate?.('visitors'),
@@ -299,7 +299,7 @@ export const ResidentDashboard = ({ activeTab, onNavigate }) => {
             </div>
           ) : expectedVisitors.length === 0 ? (
             <div className="text-center py-8 text-slate-400">
-              <QrCode className="w-7 h-7 mx-auto mb-2 opacity-40" />
+              <KeyRound className="w-7 h-7 mx-auto mb-2 opacity-40" />
               <p className="text-sm font-medium">No expected visitors</p>
               <p className="text-xs mt-1">Pre-authorize visitors to generate gate passes.</p>
             </div>
@@ -317,7 +317,7 @@ export const ResidentDashboard = ({ activeTab, onNavigate }) => {
                     {v.expectedTime ? `Expected: ${new Date(v.expectedTime).toLocaleString()}` : 'Anytime'} • {v.purpose || 'Guest Entry'}
                   </p>
                   <div className="flex items-center gap-1.5 mt-2 text-[10px] text-teal-800 font-semibold">
-                    <QrCode className="w-3.5 h-3.5" /> QR Passcode Active
+                    <KeyRound className="w-3.5 h-3.5" /> Gate Passcode Active
                   </div>
                 </div>
               ))}

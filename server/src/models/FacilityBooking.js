@@ -66,13 +66,33 @@ const facilityBookingSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['Booked', 'Cancelled', 'Completed'],
-    default: 'Booked',
+    enum: ['Pending', 'Approved', 'Booked', 'Rejected', 'Cancelled', 'Completed'],
+    default: 'Pending',
     index: true,
   },
   bookedAt: {
     type: Date,
     default: Date.now,
+  },
+  approvedAt: {
+    type: Date,
+    default: null,
+  },
+  approvedBy: {
+    type: String,
+    default: '',
+  },
+  rejectedAt: {
+    type: Date,
+    default: null,
+  },
+  rejectedBy: {
+    type: String,
+    default: '',
+  },
+  rejectionReason: {
+    type: String,
+    default: '',
   },
   cancelledAt: {
     type: Date,

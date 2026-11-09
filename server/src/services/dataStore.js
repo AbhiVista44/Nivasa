@@ -7,6 +7,7 @@ import { Flat } from '../models/Flat.js';
 import { Complaint } from '../models/Complaint.js';
 import { Visitor } from '../models/Visitor.js';
 import { Delivery } from '../models/Delivery.js';
+import { Facility } from '../models/Facility.js';
 import { FacilityBooking } from '../models/FacilityBooking.js';
 import { Notice } from '../models/Notice.js';
 import { Vendor } from '../models/Vendor.js';
@@ -1812,8 +1813,97 @@ class DataStore {
   // MILESTONE 5: FACILITY BOOKINGS & ENGINE
   // ==========================================
 
-  getFacilityList() {
+  async getFacilityList(societyId) {
+    await this.ensureSeeded();
+    if (this.isMongoConnected()) {
+      let list = await Facility.find({ $or: [{ societyId }, { societyId: null }] });
+      if (!list || list.length === 0) {
+        const docs = defaultFacilities.map(f => ({ ...f, societyId: societyId || null }));
+        list = await Facility.insertMany(docs);
+      }
+      return list.map(doc => (doc.toObject ? doc.toObject() : doc));
+    }
+
     return this.facilities;
+  }
+
+  async getFacilityById(societyId, facilityId) {
+    await this.ensureSeeded();
+    if (this.isMongoConnected()) {
+      const facility = await Facility.findOne({
+        id: facilityId,
+        $or: [{ societyId }, { societyId: null }],
+      });
+      if (facility) return facility.toObject ? facility.toObject() : facility;
+    }
+    return this.facilities.find(f => f.id === facilityId) || defaultFacilities.find(f => f.id === facilityId);
+  }
+
+  async updateFacilityCapacity(societyId, facilityId, capacity, actor) {
+    await this.ensureSeeded();
+    const numCapacity = parseInt(capacity, 10);
+    if (!numCapacity || numCapacity < 1) {
+      throw new Error('Facility capacity must be a positive integer greater than zero.');
+    }
+
+    let updatedFacility = null;
+
+    if (this.isMongoConnected()) {
+      let facility = await Facility.findOne({ id: facilityId, $or: [{ societyId }, { societyId: null }] });
+      if (facility) {
+        facility.capacity = numCapacity;
+        await facility.save();
+        updatedFacility = facility.toObject ? facility.toObject() : facility;
+      } else {
+        const defaultDef = defaultFacilities.find(f => f.id === facilityId) || {
+          id: facilityId,
+          name: facilityId,
+          capacity: numCapacity,
+        };
+        const created = await Facility.create({
+          ...defaultDef,
+          societyId,
+          capacity: numCapacity,
+        });
+        updatedFacility = created.toObject ? created.toObject() : created;
+      }
+    }
+
+    // Update in-memory copy as well
+    const memIndex = this.facilities.findIndex(f => f.id === facilityId);
+    if (memIndex !== -1) {
+      this.facilities[memIndex] = {
+        ...this.facilities[memIndex],
+        capacity: numCapacity,
+      };
+      if (!updatedFacility) updatedFacility = this.facilities[memIndex];
+    } else {
+      const defaultDef = defaultFacilities.find(f => f.id === facilityId) || {
+        id: facilityId,
+        name: facilityId,
+      };
+      const newFac = { ...defaultDef, capacity: numCapacity };
+      this.facilities.push(newFac);
+      if (!updatedFacility) updatedFacility = newFac;
+    }
+
+    await this.logAction({
+      societyId,
+      actorId: actor?._id || actor?.id,
+      actorName: actor?.name || 'Society Admin',
+      actorRole: actor?.role || 'admin',
+      action: 'FACILITY_CAPACITY_UPDATED',
+      targetType: 'Facility',
+      targetId: facilityId,
+      details: {
+        facilityId,
+        facilityName: updatedFacility?.name || facilityId,
+        newCapacity: numCapacity,
+      },
+      severity: 'info',
+    });
+
+    return updatedFacility;
   }
 
   async getFacilityBookings(societyId, filter = {}) {
@@ -1846,8 +1936,8 @@ class DataStore {
         societyId,
         facilityId,
         date,
-        status: 'Booked',
-      }).select('startTime endTime bookingNumber residentName flatNumber');
+        status: { $in: ['Pending', 'Approved', 'Booked'] },
+      }).select('startTime endTime bookingNumber residentName flatNumber status');
     }
 
     return this.facilityBookings
@@ -1855,7 +1945,7 @@ class DataStore {
         b.societyId?.toString() === societyId?.toString() &&
         b.facilityId === facilityId &&
         b.date === date &&
-        b.status === 'Booked'
+        ['Pending', 'Approved', 'Booked'].includes(b.status)
       )
       .map(b => ({
         startTime: b.startTime,
@@ -1863,6 +1953,7 @@ class DataStore {
         bookingNumber: b.bookingNumber,
         residentName: b.residentName,
         flatNumber: b.flatNumber,
+        status: b.status,
       }));
   }
 
@@ -1880,15 +1971,36 @@ class DataStore {
       throw err;
     }
 
+    // 1. Capacity Validation: Admin decides capacity; residents cannot book beyond it
+    const facility = await this.getFacilityById(societyId, facilityId);
+    const maxCapacity = facility?.capacity || 100;
+    const requestedGuests = parseInt(guestCount, 10) || 1;
+
+    if (requestedGuests > maxCapacity) {
+      const err = new Error(
+        `Booking exceeds capacity: ${facility?.name || 'This facility'} has a maximum capacity of ${maxCapacity} guests, but you requested ${requestedGuests}. Please reduce your guest count.`
+      );
+      err.code = 'CAPACITY_EXCEEDED';
+      throw err;
+    }
+
+    if (requestedGuests < 1) {
+      const err = new Error('Guest count must be at least 1.');
+      err.code = 'VALIDATION_ERROR';
+      throw err;
+    }
+
     const todayStr = new Date().toISOString().split('T')[0];
+    // Admin bookings are auto-approved; resident bookings require admin approval
+    const initialStatus = resident?.role === 'admin' ? 'Approved' : 'Pending';
 
     if (this.isMongoConnected()) {
-      // 1. Strict zero-overlap atomic conflict check
+      // 2. Strict zero-overlap atomic conflict check
       const conflict = await FacilityBooking.findOne({
         societyId,
         facilityId,
         date,
-        status: 'Booked',
+        status: { $in: ['Pending', 'Approved', 'Booked'] },
         $and: [
           { startTime: { $lt: endTime } },
           { endTime: { $gt: startTime } },
@@ -1901,11 +2013,11 @@ class DataStore {
         throw err;
       }
 
-      // 2. Check flat quota (max 2 active future/current bookings)
+      // 3. Check flat quota (max 2 active future/current bookings)
       const activeBookingsCount = await FacilityBooking.countDocuments({
         societyId,
         flatNumber,
-        status: 'Booked',
+        status: { $in: ['Pending', 'Approved', 'Booked'] },
         date: { $gte: todayStr },
       });
 
@@ -1915,13 +2027,13 @@ class DataStore {
         throw err;
       }
 
-      // 3. Create booking
+      // 4. Create booking
       const bookingNumber = `BKG-${Math.floor(1000 + Math.random() * 9000)}`;
       const newBooking = await FacilityBooking.create({
         societyId,
         bookingNumber,
         facilityId,
-        facilityName: facilityName || facilityId,
+        facilityName: facility?.name || facilityName || facilityId,
         residentId,
         residentName,
         flatNumber,
@@ -1930,9 +2042,31 @@ class DataStore {
         startTime,
         endTime,
         purpose: purpose || 'Recreation & Fitness',
-        guestCount: Number(guestCount) || 1,
-        status: 'Booked',
+        guestCount: requestedGuests,
+        status: initialStatus,
         bookedAt: new Date(),
+        approvedAt: initialStatus === 'Approved' ? new Date() : null,
+        approvedBy: initialStatus === 'Approved' ? (resident?.name || 'Admin') : '',
+      });
+
+      await this.logAction({
+        societyId,
+        actorId: resident?._id || resident?.id,
+        actorName: residentName,
+        actorRole: resident?.role || 'resident',
+        action: 'FACILITY_BOOKED',
+        targetType: 'FacilityBooking',
+        targetId: newBooking._id?.toString(),
+        details: {
+          bookingNumber,
+          facilityName: facility?.name || facilityName,
+          date,
+          startTime,
+          endTime,
+          guestCount: requestedGuests,
+          status: initialStatus,
+        },
+        severity: 'info',
       });
 
       return newBooking.toObject ? newBooking.toObject() : newBooking;
@@ -1943,7 +2077,7 @@ class DataStore {
       b.societyId?.toString() === societyId?.toString() &&
       b.facilityId === facilityId &&
       b.date === date &&
-      b.status === 'Booked' &&
+      ['Pending', 'Approved', 'Booked'].includes(b.status) &&
       b.startTime < endTime &&
       b.endTime > startTime
     );
@@ -1957,7 +2091,7 @@ class DataStore {
     const activeBookingsCount = this.facilityBookings.filter(b =>
       b.societyId?.toString() === societyId?.toString() &&
       b.flatNumber === flatNumber &&
-      b.status === 'Booked' &&
+      ['Pending', 'Approved', 'Booked'].includes(b.status) &&
       b.date >= todayStr
     ).length;
 
@@ -1973,7 +2107,7 @@ class DataStore {
       societyId,
       bookingNumber,
       facilityId,
-      facilityName: facilityName || facilityId,
+      facilityName: facility?.name || facilityName || facilityId,
       residentId,
       residentName,
       flatNumber,
@@ -1982,13 +2116,138 @@ class DataStore {
       startTime,
       endTime,
       purpose: purpose || 'Recreation & Fitness',
-      guestCount: Number(guestCount) || 1,
-      status: 'Booked',
+      guestCount: requestedGuests,
+      status: initialStatus,
       bookedAt: new Date(),
+      approvedAt: initialStatus === 'Approved' ? new Date() : null,
+      approvedBy: initialStatus === 'Approved' ? (resident?.name || 'Admin') : '',
     };
 
     this.facilityBookings.unshift(newBooking);
+
+    await this.logAction({
+      societyId,
+      actorId: resident?._id || resident?.id,
+      actorName: residentName,
+      actorRole: resident?.role || 'resident',
+      action: 'FACILITY_BOOKED',
+      targetType: 'FacilityBooking',
+      targetId: newBooking._id,
+      details: {
+        bookingNumber,
+        facilityName: facility?.name || facilityName,
+        date,
+        startTime,
+        endTime,
+        guestCount: requestedGuests,
+        status: initialStatus,
+      },
+      severity: 'info',
+    });
+
     return newBooking;
+  }
+
+  async approveFacilityBooking(id, actor) {
+    await this.ensureSeeded();
+    if (this.isMongoConnected()) {
+      const booking = mongoose.isValidObjectId(id)
+        ? await FacilityBooking.findById(id)
+        : await FacilityBooking.findOne({ bookingNumber: id });
+      if (!booking) return null;
+
+      booking.status = 'Approved';
+      booking.approvedAt = new Date();
+      booking.approvedBy = actor?.name || 'Admin';
+      await booking.save();
+
+      await this.logAction({
+        societyId: booking.societyId,
+        actorId: actor?._id || actor?.id,
+        actorName: actor?.name || 'Admin',
+        actorRole: actor?.role || 'admin',
+        action: 'FACILITY_BOOKING_APPROVED',
+        targetType: 'FacilityBooking',
+        targetId: booking._id.toString(),
+        details: { bookingNumber: booking.bookingNumber, facilityName: booking.facilityName },
+        severity: 'info',
+      });
+
+      return booking.toObject ? booking.toObject() : booking;
+    }
+
+    const booking = this.facilityBookings.find(b => b._id?.toString() === id?.toString() || b.bookingNumber === id);
+    if (!booking) return null;
+
+    booking.status = 'Approved';
+    booking.approvedAt = new Date();
+    booking.approvedBy = actor?.name || 'Admin';
+
+    await this.logAction({
+      societyId: booking.societyId,
+      actorId: actor?._id || actor?.id,
+      actorName: actor?.name || 'Admin',
+      actorRole: actor?.role || 'admin',
+      action: 'FACILITY_BOOKING_APPROVED',
+      targetType: 'FacilityBooking',
+      targetId: booking._id,
+      details: { bookingNumber: booking.bookingNumber, facilityName: booking.facilityName },
+      severity: 'info',
+    });
+
+    return booking;
+  }
+
+  async rejectFacilityBooking(id, reason, actor) {
+    await this.ensureSeeded();
+    if (this.isMongoConnected()) {
+      const booking = mongoose.isValidObjectId(id)
+        ? await FacilityBooking.findById(id)
+        : await FacilityBooking.findOne({ bookingNumber: id });
+      if (!booking) return null;
+
+      booking.status = 'Rejected';
+      booking.rejectedAt = new Date();
+      booking.rejectedBy = actor?.name || 'Admin';
+      booking.rejectionReason = reason || 'Booking rejected by Admin';
+      await booking.save();
+
+      await this.logAction({
+        societyId: booking.societyId,
+        actorId: actor?._id || actor?.id,
+        actorName: actor?.name || 'Admin',
+        actorRole: actor?.role || 'admin',
+        action: 'FACILITY_BOOKING_REJECTED',
+        targetType: 'FacilityBooking',
+        targetId: booking._id.toString(),
+        details: { bookingNumber: booking.bookingNumber, facilityName: booking.facilityName, reason },
+        severity: 'warning',
+      });
+
+      return booking.toObject ? booking.toObject() : booking;
+    }
+
+    const booking = this.facilityBookings.find(b => b._id?.toString() === id?.toString() || b.bookingNumber === id);
+    if (!booking) return null;
+
+    booking.status = 'Rejected';
+    booking.rejectedAt = new Date();
+    booking.rejectedBy = actor?.name || 'Admin';
+    booking.rejectionReason = reason || 'Booking rejected by Admin';
+
+    await this.logAction({
+      societyId: booking.societyId,
+      actorId: actor?._id || actor?.id,
+      actorName: actor?.name || 'Admin',
+      actorRole: actor?.role || 'admin',
+      action: 'FACILITY_BOOKING_REJECTED',
+      targetType: 'FacilityBooking',
+      targetId: booking._id,
+      details: { bookingNumber: booking.bookingNumber, facilityName: booking.facilityName, reason },
+      severity: 'warning',
+    });
+
+    return booking;
   }
 
   async cancelFacilityBooking(id, reason, actor) {

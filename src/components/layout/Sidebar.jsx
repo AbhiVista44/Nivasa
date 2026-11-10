@@ -17,7 +17,7 @@ import {
   Clock
 } from 'lucide-react';
 
-export const Sidebar = ({ activeTab, onSelectTab }) => {
+export const Sidebar = ({ activeTab, onSelectTab, isMobileDrawer = false }) => {
   const { role, society } = useAuth();
 
   const navConfigs = {
@@ -61,10 +61,15 @@ export const Sidebar = ({ activeTab, onSelectTab }) => {
   const navItems = navConfigs[role] || navConfigs.resident;
 
   return (
-    <aside className="w-64 bg-slate-900 text-slate-300 flex flex-col shrink-0 border-r border-slate-800 min-h-[calc(100vh-4rem)]">
-      
+    <aside
+      className={`bg-slate-900 text-slate-300 flex flex-col ${
+        isMobileDrawer
+          ? 'w-full h-full'
+          : 'w-64 xl:w-72 shrink-0 border-r border-slate-800 min-h-[calc(100vh-4rem)] sticky top-16 self-start'
+      }`}
+    >
       {/* Role Banner Accent */}
-      <div className="px-4 py-3.5 bg-slate-950/60 border-b border-slate-800/80 flex items-center justify-between">
+      <div className="px-4 py-3.5 bg-slate-950/60 border-b border-slate-800/80 flex items-center justify-between shrink-0">
         <div>
           <span className="text-[10px] uppercase font-bold tracking-widest text-teal-400">
             Active Workspace
@@ -122,7 +127,7 @@ export const Sidebar = ({ activeTab, onSelectTab }) => {
       </div>
 
       {/* Bottom Tenant Footer Card */}
-      <div className="p-3 m-3 rounded-xl bg-slate-950/80 border border-slate-800/80">
+      <div className="p-3 m-3 rounded-xl bg-slate-950/80 border border-slate-800/80 shrink-0">
         <div className="flex items-center gap-2">
           <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
           <p className="text-[11px] font-medium text-slate-300 truncate">

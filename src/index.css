@@ -27,6 +27,9 @@
   --color-brass-700: #b45309;
   --color-brass-800: #92400e;
   --color-brass-900: #78350f;
+
+  /* Extra-small breakpoint for narrow phones */
+  --breakpoint-xs: 475px;
 }
 
 :root {

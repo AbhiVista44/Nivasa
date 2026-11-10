@@ -11,10 +11,12 @@ import {
   LogOut,
   MapPin,
   Check,
-  KeyRound
+  KeyRound,
+  Menu,
+  X
 } from 'lucide-react';
 
-export const Navbar = () => {
+export const Navbar = ({ onToggleMobileMenu, mobileMenuOpen }) => {
   const { user, society, role, logout } = useAuth();
   const { unreadCount, connected } = useSocket();
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
@@ -24,19 +26,30 @@ export const Navbar = () => {
 
   return (
     <header className="sticky top-0 z-40 w-full bg-white/95 backdrop-blur border-b border-slate-200 shadow-xs">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+      <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-10 h-16 flex items-center justify-between gap-3 sm:gap-4">
         
-        {/* Brand & Society Selector */}
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-teal-900 to-teal-700 text-amber-400 flex items-center justify-center shadow-md shadow-teal-900/10">
+        {/* Left: Mobile Hamburger Toggle & Brand & Society Selector */}
+        <div className="flex items-center gap-2 sm:gap-4 min-w-0">
+          {/* Mobile Menu Hamburger Button */}
+          <button
+            type="button"
+            onClick={onToggleMobileMenu}
+            className="p-2 -ml-1 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-xl md:hidden transition cursor-pointer"
+            aria-label="Toggle navigation menu"
+          >
+            {mobileMenuOpen ? <X className="w-5 h-5 text-slate-800" /> : <Menu className="w-5 h-5 text-slate-800" />}
+          </button>
+
+          {/* Brand Logo */}
+          <div className="flex items-center gap-2.5 shrink-0">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-tr from-teal-900 to-teal-700 text-amber-400 flex items-center justify-center shadow-md shadow-teal-900/10">
               <Building2 className="w-5 h-5 text-amber-300 stroke-[2.2]" />
             </div>
-            <div className="hidden sm:block">
-              <span className="font-display font-bold text-xl tracking-tight text-slate-900">
+            <div className="hidden xs:block sm:block">
+              <span className="font-display font-bold text-lg sm:text-xl tracking-tight text-slate-900">
                 Nivasa
               </span>
-              <span className="text-xs block text-teal-700 font-medium -mt-1 tracking-wide">
+              <span className="text-[10px] sm:text-xs block text-teal-700 font-medium -mt-1 tracking-wide">
                 Community OS
               </span>
             </div>
@@ -44,14 +57,14 @@ export const Navbar = () => {
 
           <div className="h-6 w-[1px] bg-slate-200 hidden md:block" />
 
-          {/* Active Society Indicator (Locked to user's registered society) */}
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-200 bg-slate-50/80 text-xs text-slate-700 font-medium">
-            <MapPin className="w-3.5 h-3.5 text-teal-600" />
-            <span className="font-semibold max-w-[200px] truncate" title={society?.name || user?.societyName}>
+          {/* Active Society Indicator */}
+          <div className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-lg border border-slate-200 bg-slate-50/80 text-xs text-slate-700 font-medium max-w-[150px] xs:max-w-[180px] sm:max-w-[260px] md:max-w-none">
+            <MapPin className="w-3.5 h-3.5 text-teal-600 shrink-0" />
+            <span className="font-semibold truncate" title={society?.name || user?.societyName}>
               {society?.name || user?.societyName || 'Nivasa Society'}
             </span>
             {society?.code && (
-              <span className="bg-teal-100 text-teal-800 text-[10px] px-1.5 py-0.5 rounded font-mono font-bold">
+              <span className="hidden sm:inline-block bg-teal-100 text-teal-800 text-[10px] px-1.5 py-0.5 rounded font-mono font-bold shrink-0">
                 {society.code}
               </span>
             )}
@@ -59,7 +72,7 @@ export const Navbar = () => {
         </div>
 
         {/* Right: Notifications & Profile */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
           
           {/* Real-Time Notifications Hub */}
           <div className="relative">
@@ -116,10 +129,10 @@ export const Navbar = () => {
                 <img
                   src={user.avatar}
                   alt={user.name}
-                  className="w-8 h-8 rounded-full object-cover ring-1 ring-slate-200"
+                  className="w-8 h-8 rounded-full object-cover ring-1 ring-slate-200 shrink-0"
                 />
               ) : (
-                <div className="w-8 h-8 rounded-full bg-teal-800 text-amber-300 font-bold flex items-center justify-center text-xs shadow-xs">
+                <div className="w-8 h-8 rounded-full bg-teal-800 text-amber-300 font-bold flex items-center justify-center text-xs shadow-xs shrink-0">
                   {user?.name?.charAt(0)?.toUpperCase() || 'U'}
                 </div>
               )}

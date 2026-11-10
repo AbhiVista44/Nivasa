@@ -511,7 +511,7 @@ function SecurityDeliveriesView({
   return (
     <div className="space-y-5">
       {/* Stats Header */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div className="bg-white rounded-2xl border border-slate-200 p-4 text-center shadow-sm">
           <p className="text-2xl font-bold text-teal-700">{waiting.length}</p>
           <p className="text-xs text-slate-500 mt-1 font-medium">Waiting at Gate</p>

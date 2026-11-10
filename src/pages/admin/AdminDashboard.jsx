@@ -113,7 +113,7 @@ export const AdminDashboard = ({ activeTab, onNavigate }) => {
     <div className="space-y-6">
 
       {/* Welcome & Quick Action Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gradient-to-r from-teal-900 to-slate-900 p-6 rounded-2xl text-white shadow-lg shadow-teal-950/20 border border-teal-800">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-gradient-to-r from-teal-900 via-teal-800 to-slate-900 p-6 sm:p-7 rounded-2xl text-white shadow-lg shadow-teal-950/20 border border-teal-800">
         <div>
           <span className="text-[11px] font-bold uppercase tracking-wider text-amber-400">
             Society Governance Console
@@ -121,24 +121,24 @@ export const AdminDashboard = ({ activeTab, onNavigate }) => {
           <h1 className="text-2xl sm:text-3xl font-bold font-display tracking-tight mt-0.5">
             {society?.name || 'Your Society'}
           </h1>
-          <p className="text-xs text-slate-300 mt-1 max-w-xl">
+          <p className="text-xs text-slate-300 mt-1 max-w-2xl">
             Real-time management for all {society?.totalFlats || 0} units
             {society?.city ? ` across ${society.city}` : ''}. Tenant key:{' '}
             <span className="font-mono text-amber-300 font-bold">{society?.code}</span>.
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2.5 flex-wrap">
           <button
             onClick={() => onNavigate?.('notices')}
-            className="flex items-center gap-1.5 px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl text-xs shadow-md transition"
+            className="flex items-center gap-1.5 px-4 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl text-xs shadow-md transition cursor-pointer"
           >
             <Plus className="w-4 h-4" />
             New Notice
           </button>
           <button
             onClick={() => onNavigate?.('residents')}
-            className="flex items-center gap-1.5 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white font-semibold rounded-xl text-xs border border-slate-700 transition"
+            className="flex items-center gap-1.5 px-4 py-2.5 bg-slate-800/80 hover:bg-slate-700 text-white font-semibold rounded-xl text-xs border border-slate-700 transition cursor-pointer"
           >
             <Users className="w-4 h-4" />
             Flats & Resident Directory
@@ -206,10 +206,10 @@ export const AdminDashboard = ({ activeTab, onNavigate }) => {
       </div>
 
       {/* Main Split Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 xl:grid-cols-4 gap-6">
 
         {/* Active Maintenance Complaints */}
-        <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-200 shadow-xs p-5">
+        <div className="lg:col-span-2 xl:col-span-3 bg-white rounded-2xl border border-slate-200 shadow-xs p-5 sm:p-6">
           <div className="flex items-center justify-between mb-4">
             <div>
               <h2 className="text-base font-bold text-slate-900 font-display">
@@ -274,7 +274,7 @@ export const AdminDashboard = ({ activeTab, onNavigate }) => {
         </div>
 
         {/* Audit Trail Preview */}
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-5">
+        <div className="lg:col-span-1 xl:col-span-1 bg-white rounded-2xl border border-slate-200 shadow-xs p-5 sm:p-6">
           <div className="flex items-center justify-between mb-4">
             <div>
               <h2 className="text-base font-bold text-slate-900 font-display">

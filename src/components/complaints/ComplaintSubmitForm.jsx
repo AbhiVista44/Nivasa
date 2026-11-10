@@ -294,7 +294,7 @@ export const ComplaintSubmitForm = ({ onBack, onSuccess }) => {
   // Main Form
   // ──────────────────────────────────────────────────────────────────────
   return (
-    <div className="max-w-2xl mx-auto space-y-5">
+    <div className="w-full max-w-4xl mx-auto space-y-5">
       {/* Header */}
       <div className="flex items-center gap-3">
         <button

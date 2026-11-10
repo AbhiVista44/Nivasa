@@ -104,7 +104,7 @@ const VendorJobDetail = ({ job, onBack, onUpdated }) => {
   };
 
   return (
-    <div className="max-w-2xl mx-auto space-y-5">
+    <div className="w-full max-w-4xl mx-auto space-y-5">
       {/* Header */}
       <div className="flex items-start gap-3">
         <button onClick={onBack} className="mt-0.5 p-2 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-600 transition">

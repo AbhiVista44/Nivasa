@@ -119,7 +119,7 @@ const ComplaintDetail = ({ complaint, onBack, onConfirm }) => {
   const ai = complaint.aiClassification;
 
   return (
-    <div className="max-w-2xl mx-auto space-y-5">
+    <div className="w-full max-w-4xl mx-auto space-y-5">
       {/* Header */}
       <div className="flex items-start gap-3">
         <button

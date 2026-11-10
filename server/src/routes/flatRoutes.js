@@ -156,6 +156,69 @@ router.post('/:id/assign-owner', verifyToken, requireRoles('admin'), async (req,
   }
 });
 
+// Admin endpoint: Update existing flat
+router.put('/:id', verifyToken, requireRoles('admin'), async (req, res) => {
+  try {
+    const societyId = (req.user.role === 'superadmin' && req.headers['x-society-id']) || req.user.societyId;
+    const updatedFlat = await dataStore.updateFlat(societyId, req.params.id, req.body);
+
+    await dataStore.logAction({
+      societyId,
+      actorId: req.user._id,
+      actorName: req.user.name,
+      actorRole: req.user.role,
+      action: 'FLAT_UPDATED',
+      targetType: 'Flat',
+      targetId: updatedFlat.flatNumber,
+      details: {
+        flatId: req.params.id,
+        flatNumber: updatedFlat.flatNumber,
+        wing: updatedFlat.wing,
+        status: updatedFlat.status,
+      },
+    });
+
+    res.json({
+      success: true,
+      message: `Flat ${updatedFlat.flatNumber} updated successfully.`,
+      flat: updatedFlat,
+    });
+  } catch (error) {
+    console.error('Update flat error:', error);
+    res.status(400).json({ success: false, message: error.message || 'Failed to update flat.' });
+  }
+});
+
+// Admin endpoint: Delete flat
+router.delete('/:id', verifyToken, requireRoles('admin'), async (req, res) => {
+  try {
+    const societyId = (req.user.role === 'superadmin' && req.headers['x-society-id']) || req.user.societyId;
+    const result = await dataStore.deleteFlat(societyId, req.params.id);
+
+    await dataStore.logAction({
+      societyId,
+      actorId: req.user._id,
+      actorName: req.user.name,
+      actorRole: req.user.role,
+      action: 'FLAT_DELETED',
+      targetType: 'Flat',
+      targetId: result.flatNumber || req.params.id,
+      details: {
+        flatId: req.params.id,
+        flatNumber: result.flatNumber,
+      },
+    });
+
+    res.json({
+      success: true,
+      message: `Flat ${result.flatNumber || ''} deleted successfully.`,
+    });
+  } catch (error) {
+    console.error('Delete flat error:', error);
+    res.status(400).json({ success: false, message: error.message || 'Failed to delete flat.' });
+  }
+});
+
 // Resident endpoint: Add family member to their flat
 router.post('/family', verifyToken, async (req, res) => {
   try {

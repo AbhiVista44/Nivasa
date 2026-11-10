@@ -66,6 +66,64 @@ router.get('/:id/wings', verifyToken, async (req, res) => {
   }
 });
 
+// Update a wing in society (Admin only)
+router.put('/:id/wings/:wingId', verifyToken, requireRoles('admin'), async (req, res) => {
+  try {
+    const { name, totalFloors, flatsPerFloor } = req.body;
+    const result = await dataStore.updateWing(req.params.id, req.params.wingId, {
+      name,
+      totalFloors,
+      flatsPerFloor,
+    });
+
+    await dataStore.logAction({
+      societyId: req.params.id,
+      actorId: req.user._id,
+      actorName: req.user.name,
+      actorRole: req.user.role,
+      action: 'WING_UPDATED',
+      targetType: 'Society',
+      targetId: req.params.id,
+      details: { wingId: req.params.wingId, name, totalFloors, flatsPerFloor },
+    });
+
+    res.json({
+      success: true,
+      message: `Wing updated successfully.`,
+      wings: result.wings,
+    });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message || 'Failed to update wing.' });
+  }
+});
+
+// Delete a wing from society (Admin only)
+router.delete('/:id/wings/:wingId', verifyToken, requireRoles('admin'), async (req, res) => {
+  try {
+    const force = req.query.force === 'true';
+    const result = await dataStore.deleteWing(req.params.id, req.params.wingId, { force });
+
+    await dataStore.logAction({
+      societyId: req.params.id,
+      actorId: req.user._id,
+      actorName: req.user.name,
+      actorRole: req.user.role,
+      action: 'WING_DELETED',
+      targetType: 'Society',
+      targetId: req.params.id,
+      details: { wing: result.deletedWing },
+    });
+
+    res.json({
+      success: true,
+      message: `Wing "${result.deletedWing}" deleted successfully.`,
+      wings: result.wings,
+    });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message || 'Failed to delete wing.' });
+  }
+});
+
 // Get audit logs for current society (Admin only)
 router.get('/:id/audit-logs', verifyToken, requireRoles('admin'), async (req, res) => {
   try {

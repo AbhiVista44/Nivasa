@@ -382,6 +382,7 @@ class DataStore {
   async addWing(societyId, wingData) {
     await this.ensureSeeded();
     const wing = {
+      _id: new mongoose.Types.ObjectId(),
       name: wingData.name,
       totalFloors: Number(wingData.totalFloors) || 1,
       flatsPerFloor: Number(wingData.flatsPerFloor) || 1,
@@ -401,6 +402,150 @@ class DataStore {
     society.wings = society.wings || [];
     society.wings.push(wing);
     return society;
+  }
+
+  async updateWing(societyId, wingIdOrName, updateData) {
+    await this.ensureSeeded();
+    const { name, totalFloors, flatsPerFloor } = updateData;
+
+    if (this.isMongoConnected()) {
+      const society = await Society.findById(societyId);
+      if (!society) throw new Error('Society not found.');
+
+      const wing = society.wings?.find(
+        w => (w._id && w._id.toString() === wingIdOrName.toString()) || w.name === wingIdOrName
+      );
+      if (!wing) throw new Error(`Wing "${wingIdOrName}" not found.`);
+
+      const oldName = wing.name;
+      const newName = name ? name.trim() : oldName;
+
+      if (newName !== oldName) {
+        const duplicate = society.wings.find(
+          w => w.name.toLowerCase() === newName.toLowerCase() &&
+               w._id?.toString() !== wing._id?.toString()
+        );
+        if (duplicate) {
+          throw new Error(`Another wing named "${newName}" already exists.`);
+        }
+      }
+
+      if (name) wing.name = newName;
+      if (totalFloors !== undefined) wing.totalFloors = Number(totalFloors) || wing.totalFloors;
+      if (flatsPerFloor !== undefined) wing.flatsPerFloor = Number(flatsPerFloor) || wing.flatsPerFloor;
+
+      await society.save();
+
+      if (newName !== oldName) {
+        await Flat.updateMany({ societyId, wing: oldName }, { $set: { wing: newName } });
+        await User.updateMany({ societyId, wing: oldName }, { $set: { wing: newName } });
+      }
+
+      return { society, wings: society.wings };
+    }
+
+    // In-memory mode
+    const society = this.societies.find(s => s._id.toString() === societyId.toString());
+    if (!society) throw new Error('Society not found.');
+
+    const wing = society.wings?.find(
+      w => (w._id && w._id.toString() === wingIdOrName.toString()) || w.name === wingIdOrName
+    );
+    if (!wing) throw new Error(`Wing "${wingIdOrName}" not found.`);
+
+    const oldName = wing.name;
+    const newName = name ? name.trim() : oldName;
+
+    if (newName !== oldName) {
+      const duplicate = society.wings.find(
+        w => w.name.toLowerCase() === newName.toLowerCase() &&
+             w._id?.toString() !== wing._id?.toString()
+      );
+      if (duplicate) {
+        throw new Error(`Another wing named "${newName}" already exists.`);
+      }
+    }
+
+    if (name) wing.name = newName;
+    if (totalFloors !== undefined) wing.totalFloors = Number(totalFloors) || wing.totalFloors;
+    if (flatsPerFloor !== undefined) wing.flatsPerFloor = Number(flatsPerFloor) || wing.flatsPerFloor;
+
+    if (newName !== oldName) {
+      this.flats.forEach(f => {
+        if (f.societyId.toString() === societyId.toString() && f.wing === oldName) {
+          f.wing = newName;
+        }
+      });
+      this.users.forEach(u => {
+        if (u.societyId.toString() === societyId.toString() && u.wing === oldName) {
+          u.wing = newName;
+        }
+      });
+    }
+
+    return { society, wings: society.wings };
+  }
+
+  async deleteWing(societyId, wingIdOrName, options = {}) {
+    await this.ensureSeeded();
+
+    if (this.isMongoConnected()) {
+      const society = await Society.findById(societyId);
+      if (!society) throw new Error('Society not found.');
+
+      const wingIndex = society.wings?.findIndex(
+        w => (w._id && w._id.toString() === wingIdOrName.toString()) || w.name === wingIdOrName
+      );
+      if (wingIndex === -1 || wingIndex === undefined) {
+        throw new Error(`Wing "${wingIdOrName}" not found.`);
+      }
+
+      const wing = society.wings[wingIndex];
+      const flatCount = await Flat.countDocuments({ societyId, wing: wing.name });
+
+      if (flatCount > 0 && !options.force) {
+        throw new Error(`Cannot delete wing "${wing.name}" because it still contains ${flatCount} flat(s). Please delete or reassign the flats first.`);
+      }
+
+      if (flatCount > 0 && options.force) {
+        await Flat.deleteMany({ societyId, wing: wing.name });
+        await Society.findByIdAndUpdate(societyId, { $inc: { totalFlats: -flatCount } });
+      }
+
+      society.wings.splice(wingIndex, 1);
+      await society.save();
+      return { success: true, wings: society.wings, deletedWing: wing.name };
+    }
+
+    // In-memory mode
+    const society = this.societies.find(s => s._id.toString() === societyId.toString());
+    if (!society) throw new Error('Society not found.');
+
+    const wingIndex = society.wings?.findIndex(
+      w => (w._id && w._id.toString() === wingIdOrName.toString()) || w.name === wingIdOrName
+    );
+    if (wingIndex === -1 || wingIndex === undefined) {
+      throw new Error(`Wing "${wingIdOrName}" not found.`);
+    }
+
+    const wing = society.wings[wingIndex];
+    const flatCount = this.flats.filter(
+      f => f.societyId.toString() === societyId.toString() && f.wing === wing.name
+    ).length;
+
+    if (flatCount > 0 && !options.force) {
+      throw new Error(`Cannot delete wing "${wing.name}" because it still contains ${flatCount} flat(s). Please delete or reassign the flats first.`);
+    }
+
+    if (flatCount > 0 && options.force) {
+      this.flats = this.flats.filter(
+        f => !(f.societyId.toString() === societyId.toString() && f.wing === wing.name)
+      );
+      society.totalFlats = Math.max(0, (society.totalFlats || 0) - flatCount);
+    }
+
+    society.wings.splice(wingIndex, 1);
+    return { success: true, wings: society.wings, deletedWing: wing.name };
   }
 
   async createFlat(societyId, flatData) {
@@ -630,6 +775,197 @@ class DataStore {
     flat.status = 'occupied';
     flat.occupancyType = 'owner';
     return flat;
+  }
+
+  async updateFlat(societyId, flatId, updateData) {
+    await this.ensureSeeded();
+    const {
+      wing,
+      flatNumber,
+      floor,
+      type,
+      areaSqFt,
+      status,
+      occupancyType,
+      allocatedParkingSlot,
+      intercomNumber,
+      primaryResident,
+      unassignResident,
+    } = updateData;
+
+    const normalizedFlatNo = flatNumber ? flatNumber.toUpperCase().trim() : undefined;
+
+    if (this.isMongoConnected()) {
+      const flat = await Flat.findById(flatId);
+      if (!flat || (societyId && flat.societyId.toString() !== societyId.toString())) {
+        throw new Error('Flat not found.');
+      }
+
+      if (normalizedFlatNo && normalizedFlatNo !== flat.flatNumber) {
+        const conflict = await Flat.findOne({
+          societyId: flat.societyId,
+          flatNumber: normalizedFlatNo,
+          _id: { $ne: flat._id },
+        });
+        if (conflict) {
+          throw new Error(`Flat ${normalizedFlatNo} already exists in this society.`);
+        }
+      }
+
+      const oldFlatNumber = flat.flatNumber;
+      const oldWing = flat.wing;
+
+      if (wing !== undefined) flat.wing = wing;
+      if (normalizedFlatNo !== undefined) flat.flatNumber = normalizedFlatNo;
+      if (floor !== undefined) flat.floor = Number(floor);
+      if (type !== undefined) flat.type = type;
+      if (areaSqFt !== undefined) flat.areaSqFt = Number(areaSqFt);
+      if (allocatedParkingSlot !== undefined) flat.allocatedParkingSlot = allocatedParkingSlot;
+      if (intercomNumber !== undefined) flat.intercomNumber = intercomNumber;
+      if (status !== undefined) flat.status = status;
+      if (occupancyType !== undefined) flat.occupancyType = occupancyType;
+
+      if (unassignResident || status === 'vacant') {
+        if (flat.primaryResident?.userId) {
+          await User.findByIdAndUpdate(flat.primaryResident.userId, {
+            $unset: { flatNumber: '', wing: '' },
+          });
+        }
+        flat.primaryResident = null;
+        flat.occupancyType = 'vacant';
+        flat.status = 'vacant';
+      } else if (primaryResident) {
+        flat.primaryResident = {
+          name: primaryResident.name || flat.primaryResident?.name || '',
+          email: primaryResident.email ? primaryResident.email.toLowerCase() : (flat.primaryResident?.email || ''),
+          phone: primaryResident.phone || flat.primaryResident?.phone || '',
+          userId: primaryResident.userId || flat.primaryResident?.userId,
+        };
+        if (flat.primaryResident.userId) {
+          await User.findByIdAndUpdate(flat.primaryResident.userId, {
+            name: flat.primaryResident.name,
+            phone: flat.primaryResident.phone,
+            flatNumber: flat.flatNumber,
+            wing: flat.wing,
+          });
+        }
+      } else if (flat.primaryResident?.userId && (normalizedFlatNo !== oldFlatNumber || wing !== oldWing)) {
+        await User.findByIdAndUpdate(flat.primaryResident.userId, {
+          flatNumber: flat.flatNumber,
+          wing: flat.wing,
+        });
+      }
+
+      await flat.save();
+      return flat;
+    }
+
+    // In-memory mode
+    const flat = this.flats.find(f => f._id.toString() === flatId.toString());
+    if (!flat || (societyId && flat.societyId.toString() !== societyId.toString())) {
+      throw new Error('Flat not found.');
+    }
+
+    if (normalizedFlatNo && normalizedFlatNo !== flat.flatNumber) {
+      const conflict = this.flats.find(
+        f => f.societyId.toString() === flat.societyId.toString() &&
+             f.flatNumber === normalizedFlatNo &&
+             f._id.toString() !== flatId.toString()
+      );
+      if (conflict) {
+        throw new Error(`Flat ${normalizedFlatNo} already exists in this society.`);
+      }
+    }
+
+    const oldFlatNumber = flat.flatNumber;
+    const oldWing = flat.wing;
+
+    if (wing !== undefined) flat.wing = wing;
+    if (normalizedFlatNo !== undefined) flat.flatNumber = normalizedFlatNo;
+    if (floor !== undefined) flat.floor = Number(floor);
+    if (type !== undefined) flat.type = type;
+    if (areaSqFt !== undefined) flat.areaSqFt = Number(areaSqFt);
+    if (allocatedParkingSlot !== undefined) flat.allocatedParkingSlot = allocatedParkingSlot;
+    if (intercomNumber !== undefined) flat.intercomNumber = intercomNumber;
+    if (status !== undefined) flat.status = status;
+    if (occupancyType !== undefined) flat.occupancyType = occupancyType;
+
+    if (unassignResident || status === 'vacant') {
+      if (flat.primaryResident?.userId) {
+        const u = this.users.find(usr => usr._id.toString() === flat.primaryResident.userId.toString());
+        if (u) {
+          u.flatNumber = '';
+          u.wing = '';
+        }
+      }
+      flat.primaryResident = null;
+      flat.occupancyType = 'vacant';
+      flat.status = 'vacant';
+    } else if (primaryResident) {
+      flat.primaryResident = {
+        name: primaryResident.name || flat.primaryResident?.name || '',
+        email: primaryResident.email ? primaryResident.email.toLowerCase() : (flat.primaryResident?.email || ''),
+        phone: primaryResident.phone || flat.primaryResident?.phone || '',
+        userId: primaryResident.userId || flat.primaryResident?.userId,
+      };
+      if (flat.primaryResident.userId) {
+        const u = this.users.find(usr => usr._id.toString() === flat.primaryResident.userId.toString());
+        if (u) {
+          u.name = flat.primaryResident.name;
+          u.phone = flat.primaryResident.phone;
+          u.flatNumber = flat.flatNumber;
+          u.wing = flat.wing;
+        }
+      }
+    } else if (flat.primaryResident?.userId && (normalizedFlatNo !== oldFlatNumber || wing !== oldWing)) {
+      const u = this.users.find(usr => usr._id.toString() === flat.primaryResident.userId.toString());
+      if (u) {
+        u.flatNumber = flat.flatNumber;
+        u.wing = flat.wing;
+      }
+    }
+
+    return flat;
+  }
+
+  async deleteFlat(societyId, flatId) {
+    await this.ensureSeeded();
+
+    if (this.isMongoConnected()) {
+      const flat = await Flat.findById(flatId);
+      if (!flat || (societyId && flat.societyId.toString() !== societyId.toString())) {
+        throw new Error('Flat not found.');
+      }
+
+      if (flat.primaryResident?.userId) {
+        await User.findByIdAndUpdate(flat.primaryResident.userId, {
+          $unset: { flatNumber: '', wing: '' },
+        });
+      }
+
+      await Flat.findByIdAndDelete(flatId);
+      await Society.findByIdAndUpdate(flat.societyId, { $inc: { totalFlats: -1 } });
+      return { success: true, flatNumber: flat.flatNumber };
+    }
+
+    // In-memory mode
+    const idx = this.flats.findIndex(f => f._id.toString() === flatId.toString());
+    if (idx === -1) throw new Error('Flat not found.');
+    const flat = this.flats[idx];
+
+    if (flat.primaryResident?.userId) {
+      const u = this.users.find(usr => usr._id.toString() === flat.primaryResident.userId.toString());
+      if (u) {
+        u.flatNumber = '';
+        u.wing = '';
+      }
+    }
+
+    this.flats.splice(idx, 1);
+    const soc = this.societies.find(s => s._id.toString() === flat.societyId.toString());
+    if (soc && soc.totalFlats > 0) soc.totalFlats -= 1;
+
+    return { success: true, flatNumber: flat.flatNumber };
   }
 
   async createStaffUser(societyId, staffData) {

@@ -614,22 +614,17 @@ export const ResidentsFlatsDirectory = () => {
               <div
                 key={flat._id}
                 onClick={() => setSelectedFlat(flat)}
-                className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs hover:border-teal-400 hover:shadow-md transition cursor-pointer flex flex-col justify-between group"
+                className="bg-white rounded-2xl border border-slate-200 p-4 shadow-xs hover:border-teal-400 hover:shadow-md transition cursor-pointer flex flex-col gap-3 group"
               >
-                <div>
-                  <div className="flex items-center justify-between mb-2.5">
-                    <div className="flex items-center gap-2">
-                      <span className="font-mono text-base font-extrabold text-slate-900 group-hover:text-teal-800 transition">
+                {/* ── Top row: Flat number + actions ── */}
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-mono text-lg font-extrabold text-slate-900 group-hover:text-teal-800 transition leading-none">
                         {flat.flatNumber}
                       </span>
-                      <span className="text-[11px] font-semibold text-slate-500">
-                        {flat.type}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center gap-1.5">
                       <span
-                        className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase ${
+                        className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase shrink-0 ${
                           isOccupied
                             ? 'bg-emerald-100 text-emerald-800'
                             : isVacant
@@ -639,85 +634,82 @@ export const ResidentsFlatsDirectory = () => {
                       >
                         {flat.status}
                       </span>
-
-                      {/* Admin Quick Action Buttons */}
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          openEditFlatModal(flat);
-                        }}
-                        className="p-1 rounded-lg text-slate-400 hover:text-teal-700 hover:bg-teal-50 transition"
-                        title="Edit Flat Details"
-                      >
-                        <Pencil className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setDeletingFlat(flat);
-                        }}
-                        className="p-1 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition"
-                        title="Delete Flat"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
                     </div>
+                    <span className="text-[11px] font-semibold text-slate-400 mt-0.5 block">
+                      {flat.type}
+                    </span>
                   </div>
 
-                  <p className="text-[11px] text-slate-500 font-medium">
-                    {flat.wing} • Floor {flat.floor} • {flat.areaSqFt} sq.ft
-                  </p>
-
-                  {/* Primary Resident Info */}
-                  <div className="mt-4 pt-3 border-t border-slate-100 space-y-1.5 text-xs">
-                    {isOccupied && flat.primaryResident ? (
-                      <>
-                        <div className="flex items-center justify-between">
-                          <span className="text-slate-500">Resident:</span>
-                          <span className="font-bold text-slate-900 truncate max-w-[170px]">
-                            {flat.primaryResident.name}
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-slate-500">Type:</span>
-                          <span className="capitalize font-semibold text-teal-800">
-                            {flat.occupancyType}
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-slate-500">Phone:</span>
-                          <span className="font-mono text-slate-700">
-                            {flat.primaryResident.phone || '—'}
-                          </span>
-                        </div>
-                      </>
-                    ) : (
-                      <div className="py-2 flex items-center justify-between">
-                        <span className="text-slate-400 italic text-[11px]">Unoccupied unit</span>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setAssignOwnerTarget(flat);
-                          }}
-                          className="px-2.5 py-1 bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200 rounded-lg text-[10px] font-bold transition flex items-center gap-1"
-                        >
-                          <UserPlus className="w-3 h-3" />
-                          Assign Owner
-                        </button>
-                      </div>
-                    )}
+                  {/* Admin action buttons — stacked vertically so they don't crowd the badge */}
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); openEditFlatModal(flat); }}
+                      className="p-1.5 rounded-lg text-slate-400 hover:text-teal-700 hover:bg-teal-50 transition"
+                      title="Edit Flat"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); setDeletingFlat(flat); }}
+                      className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition"
+                      title="Delete Flat"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
                   </div>
                 </div>
 
-                {/* Footer details: Parking & Intercom */}
-                <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-600">
-                  <div className="flex items-center gap-1 font-mono truncate max-w-[180px]">
-                    <Car className="w-3.5 h-3.5 text-teal-700 shrink-0" />
-                    <span>{flat.allocatedParkingSlot || 'Unassigned'}</span>
+                {/* ── Wing / Floor / Area ── */}
+                <p className="text-[11px] text-slate-500 font-medium leading-relaxed">
+                  {flat.wing} &nbsp;•&nbsp; Floor {flat.floor} &nbsp;•&nbsp; {flat.areaSqFt} sq.ft
+                </p>
+
+                {/* ── Resident details ── */}
+                <div className="pt-3 border-t border-slate-100 space-y-2 text-xs">
+                  {isOccupied && flat.primaryResident ? (
+                    <>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-slate-400 shrink-0">Resident</span>
+                        <span className="font-bold text-slate-900 truncate text-right">
+                          {flat.primaryResident.name}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-slate-400 shrink-0">Type</span>
+                        <span className="capitalize font-semibold text-teal-700 text-right">
+                          {flat.occupancyType}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-slate-400 shrink-0">Phone</span>
+                        <span className="font-mono text-slate-600 text-right">
+                          {flat.primaryResident.phone || '—'}
+                        </span>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="flex items-center justify-between gap-2 py-1">
+                      <span className="text-slate-400 italic text-[11px]">Unoccupied unit</span>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setAssignOwnerTarget(flat); }}
+                        className="px-2.5 py-1 bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200 rounded-lg text-[10px] font-bold transition flex items-center gap-1 shrink-0"
+                      >
+                        <UserPlus className="w-3 h-3" />
+                        Assign
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* ── Footer: Parking & Intercom ── */}
+                <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-2 text-[11px] text-slate-500">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <Car className="w-3.5 h-3.5 text-teal-600 shrink-0" />
+                    <span className="truncate font-medium">{flat.allocatedParkingSlot || 'Unassigned'}</span>
                   </div>
-                  <span className="font-mono text-teal-800 font-bold">
+                  <span className="font-mono text-teal-700 font-bold shrink-0">
                     Ext: {flat.intercomNumber || 'N/A'}
                   </span>
                 </div>

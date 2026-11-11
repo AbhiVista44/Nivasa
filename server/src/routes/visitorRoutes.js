@@ -356,4 +356,35 @@ router.post('/:id/revoke', verifyToken, requireRoles('resident', 'admin'), async
   }
 });
 
+// 12. Delete / cancel visitor or walk-in request (security, admin, resident)
+router.delete('/:id', verifyToken, requireRoles('security', 'admin', 'resident'), async (req, res) => {
+  try {
+    const societyId = req.headers['x-society-id'] || req.user.societyId;
+    const deleted = await dataStore.deleteVisitor(req.params.id, societyId);
+    if (!deleted) {
+      return res.status(404).json({ success: false, message: 'Visitor request not found.' });
+    }
+
+    await dataStore.logAction({
+      societyId: req.user.societyId,
+      actorId: req.user._id,
+      actorName: req.user.name,
+      actorRole: req.user.role,
+      action: 'VISITOR_REQUEST_DELETED',
+      targetType: 'Visitor',
+      targetId: deleted._id?.toString() || deleted.visitorNumber,
+      details: { visitorName: deleted.name, flatNumber: deleted.flatNumber },
+    });
+
+    res.json({
+      success: true,
+      message: `Walk-in request for ${deleted.name} deleted successfully.`,
+      visitor: deleted,
+    });
+  } catch (error) {
+    console.error('Delete visitor error:', error);
+    res.status(500).json({ success: false, message: 'Failed to delete visitor request.' });
+  }
+});
+
 export default router;

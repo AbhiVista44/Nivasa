@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
 import {
@@ -7,7 +8,6 @@ import {
   LogOut,
   AlertTriangle,
   PhoneCall,
-  Camera,
   CheckCircle2,
   XCircle,
   Clock,
@@ -17,8 +17,7 @@ import {
   BellRing,
   Loader2,
   ShieldCheck,
-  Video,
-  VideoOff
+  Trash2
 } from 'lucide-react';
 import { IntercomDirectoryModal } from '../../components/security/IntercomDirectoryModal';
 import { DeliveriesPanel } from '../../components/deliveries/DeliveriesPanel';
@@ -39,20 +38,23 @@ export const SecurityDashboard = ({ activeTab = 'gate-console', onNavigate }) =>
   const [isIntercomModalOpen, setIsIntercomModalOpen] = useState(false);
   const [emergencyAlertActive, setEmergencyAlertActive] = useState(false);
 
+  // Registered flats for society dropdown
+  const [registeredFlats, setRegisteredFlats] = useState([]);
+  const [loadingFlats, setLoadingFlats] = useState(false);
+
   // Walk-in Registration form state
   const [walkinName, setWalkinName] = useState('');
   const [walkinPhone, setWalkinPhone] = useState('');
   const [walkinFlat, setWalkinFlat] = useState('');
+  const [walkinWing, setWalkinWing] = useState('');
   const [walkinType, setWalkinType] = useState('Guest');
   const [walkinVehicle, setWalkinVehicle] = useState('');
   const [walkinSubmitting, setWalkinSubmitting] = useState(false);
   const [walkinFeedback, setWalkinFeedback] = useState('');
 
-  // Camera capture state
-  const [isCameraActive, setIsCameraActive] = useState(false);
-  const [capturedPhoto, setCapturedPhoto] = useState(null);
-  const videoRef = useRef(null);
-  const streamRef = useRef(null);
+  // Delete Walk-in Request state
+  const [deletingVisitor, setDeletingVisitor] = useState(null);
+  const [deletingLoading, setDeletingLoading] = useState(false);
 
   // Fetch live gate data
   const fetchGateData = async () => {
@@ -75,8 +77,30 @@ export const SecurityDashboard = ({ activeTab = 'gate-console', onNavigate }) =>
     }
   };
 
+  // Fetch registered society flats for destination dropdown
+  const fetchFlats = async () => {
+    try {
+      setLoadingFlats(true);
+      const res = await api.get('/flats');
+      if (res.data.success) {
+        const sorted = (res.data.flats || []).sort((a, b) => {
+          if ((a.wing || '') !== (b.wing || '')) {
+            return (a.wing || '').localeCompare(b.wing || '');
+          }
+          return (a.flatNumber || '').localeCompare(b.flatNumber || '', undefined, { numeric: true });
+        });
+        setRegisteredFlats(sorted);
+      }
+    } catch (err) {
+      console.warn('Failed to fetch registered flats:', err.message);
+    } finally {
+      setLoadingFlats(false);
+    }
+  };
+
   useEffect(() => {
     fetchGateData();
+    fetchFlats();
     const interval = setInterval(fetchGateData, 4000);
     return () => clearInterval(interval);
   }, []);
@@ -141,40 +165,22 @@ export const SecurityDashboard = ({ activeTab = 'gate-console', onNavigate }) =>
     }
   };
 
-  // Start webcam
-  const startCamera = async () => {
+  // Delete walk-in request confirmation handler
+  const confirmDeleteVisitor = async () => {
+    if (!deletingVisitor) return;
+    const targetId = deletingVisitor._id || deletingVisitor.visitorNumber;
+    setDeletingLoading(true);
     try {
-      setIsCameraActive(true);
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 320, height: 240 } });
-      streamRef.current = stream;
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
+      const res = await api.delete(`/visitors/${targetId}`);
+      if (res.data.success) {
+        setPendingApprovals(prev => prev.filter(p => (p._id || p.visitorNumber) !== targetId));
+        fetchGateData();
+        setDeletingVisitor(null);
       }
     } catch (err) {
-      console.warn('Webcam not accessible:', err.message);
-      // Fallback placeholder photo
-      setCapturedPhoto('https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=120&auto=format&fit=crop&q=80');
-      setIsCameraActive(false);
-    }
-  };
-
-  const stopCamera = () => {
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach(t => t.stop());
-      streamRef.current = null;
-    }
-    setIsCameraActive(false);
-  };
-
-  const captureSnapshot = () => {
-    if (videoRef.current) {
-      const canvas = document.createElement('canvas');
-      canvas.width = 320;
-      canvas.height = 240;
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(videoRef.current, 0, 0, 320, 240);
-      setCapturedPhoto(canvas.toDataURL('image/jpeg'));
-      stopCamera();
+      alert(err.response?.data?.message || 'Failed to delete walk-in request.');
+    } finally {
+      setDeletingLoading(false);
     }
   };
 
@@ -182,7 +188,7 @@ export const SecurityDashboard = ({ activeTab = 'gate-console', onNavigate }) =>
   const handleWalkinSubmit = async (e) => {
     e.preventDefault();
     if (!walkinName.trim() || !walkinFlat.trim()) {
-      setWalkinFeedback('Please provide visitor name and flat number.');
+      setWalkinFeedback('Please provide visitor name and select a destination flat.');
       return;
     }
 
@@ -195,16 +201,18 @@ export const SecurityDashboard = ({ activeTab = 'gate-console', onNavigate }) =>
         phone: walkinPhone.trim(),
         vehicleNumber: walkinVehicle.trim(),
         flatNumber: walkinFlat.trim(),
+        wing: walkinWing.trim(),
         type: walkinType,
-        photoUrl: capturedPhoto || '',
+        photoUrl: '',
       });
 
       if (res.data.success) {
         setWalkinFeedback(res.data.message);
         setWalkinName('');
         setWalkinPhone('');
+        setWalkinFlat('');
+        setWalkinWing('');
         setWalkinVehicle('');
-        setCapturedPhoto(null);
         fetchGateData();
       }
     } catch (err) {
@@ -300,35 +308,50 @@ export const SecurityDashboard = ({ activeTab = 'gate-console', onNavigate }) =>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 pt-1">
-            {pendingApprovals.map((p) => (
-              <div
-                key={p._id || p.visitorNumber}
-                className="bg-white p-3 rounded-xl border border-amber-200 shadow-xs flex items-center justify-between gap-2"
-              >
-                <div>
-                  <p className="text-xs font-bold text-slate-900">{p.name}</p>
-                  <p className="text-[11px] text-slate-500 font-mono">
-                    Flat <strong className="text-teal-800">{p.flatNumber}</strong> • {p.type}
-                  </p>
-                  <p className="text-[10px] text-amber-700 font-medium">
-                    Status: <span className="font-bold">{p.status}</span>
-                  </p>
-                </div>
+            {pendingApprovals.map((p) => {
+              const passId = p._id || p.visitorNumber;
+              return (
+                <div
+                  key={passId}
+                  className="bg-white p-3 rounded-xl border border-amber-200 shadow-xs flex items-center justify-between gap-2"
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-bold text-slate-900 truncate">{p.name}</p>
+                    <p className="text-[11px] text-slate-500 font-mono">
+                      Flat <strong className="text-teal-800">{p.flatNumber}</strong> {p.wing ? `(${p.wing})` : ''} • {p.type}
+                    </p>
+                    <p className="text-[10px] text-amber-700 font-medium">
+                      Status: <span className="font-bold">{p.status}</span>
+                    </p>
+                  </div>
 
-                {p.status === 'Approved' ? (
-                  <button
-                    onClick={() => handleAuthorizeEntry(p._id || p.visitorNumber)}
-                    className="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold transition"
-                  >
-                    Allow In
-                  </button>
-                ) : (
-                  <span className="text-[10px] bg-amber-100 text-amber-800 font-bold px-2 py-1 rounded-lg">
-                    Waiting…
-                  </span>
-                )}
-              </div>
-            ))}
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    {p.status === 'Approved' ? (
+                      <button
+                        onClick={() => handleAuthorizeEntry(passId)}
+                        className="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold transition cursor-pointer"
+                      >
+                        Allow In
+                      </button>
+                    ) : (
+                      <span className="text-[10px] bg-amber-100 text-amber-800 font-bold px-2 py-1 rounded-lg">
+                        Waiting…
+                      </span>
+                    )}
+
+                    {/* Option to delete registered walk-in request */}
+                    <button
+                      type="button"
+                      onClick={() => setDeletingVisitor(p)}
+                      className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 border border-slate-200 hover:border-rose-200 transition cursor-pointer"
+                      title="Delete Walk-in Request"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
@@ -430,63 +453,19 @@ export const SecurityDashboard = ({ activeTab = 'gate-console', onNavigate }) =>
 
         {/* Walk-in Visitor Registration Form */}
         <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-xs space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              <div className="p-2.5 rounded-2xl bg-teal-50 text-teal-700 border border-teal-200">
-                <UserCheck className="w-5 h-5" />
-              </div>
-              <div>
-                <h2 className="text-base font-bold text-slate-900 font-display">
-                  Register Walk-in Visitor
-                </h2>
-                <p className="text-xs text-slate-500">
-                  Logs visitor and prompts resident approval
-                </p>
-              </div>
+          <div className="flex items-center gap-2.5">
+            <div className="p-2.5 rounded-2xl bg-teal-50 text-teal-700 border border-teal-200">
+              <UserCheck className="w-5 h-5" />
             </div>
-
-            {/* Webcam / Photo Trigger */}
-            <button
-              type="button"
-              onClick={isCameraActive ? stopCamera : startCamera}
-              className={`p-2 rounded-xl text-xs font-bold border flex items-center gap-1 transition ${
-                isCameraActive ? 'bg-rose-50 text-rose-700 border-rose-200' : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
-              }`}
-            >
-              {isCameraActive ? <VideoOff className="w-4 h-4" /> : <Camera className="w-4 h-4 text-teal-600" />}
-              {isCameraActive ? 'Cancel Cam' : 'Capture Photo'}
-            </button>
+            <div>
+              <h2 className="text-base font-bold text-slate-900 font-display">
+                Register Walk-in Visitor
+              </h2>
+              <p className="text-xs text-slate-500">
+                Logs visitor and prompts resident approval
+              </p>
+            </div>
           </div>
-
-          {/* Live Camera Preview / Snapshot */}
-          {isCameraActive && (
-            <div className="p-3 bg-slate-900 rounded-2xl text-center space-y-2">
-              <video ref={videoRef} autoPlay playsInline className="w-48 h-36 rounded-xl mx-auto object-cover border border-slate-700" />
-              <button
-                type="button"
-                onClick={captureSnapshot}
-                className="px-4 py-1.5 bg-teal-500 hover:bg-teal-400 text-slate-950 font-bold rounded-xl text-xs"
-              >
-                Snap Photo
-              </button>
-            </div>
-          )}
-
-          {capturedPhoto && (
-            <div className="flex items-center gap-3 p-2.5 bg-teal-50 rounded-xl border border-teal-200">
-              <img src={capturedPhoto} alt="Visitor Snapshot" className="w-10 h-10 rounded-lg object-cover border" />
-              <div className="flex-1">
-                <p className="text-xs font-bold text-teal-900">Photo / ID Snapshot Captured</p>
-                <p className="text-[10px] text-teal-700">Will be sent with resident approval prompt</p>
-              </div>
-              <button
-                onClick={() => setCapturedPhoto(null)}
-                className="text-xs text-rose-600 font-bold hover:underline"
-              >
-                Remove
-              </button>
-            </div>
-          )}
 
           <form onSubmit={handleWalkinSubmit} className="space-y-3 text-xs">
             {walkinFeedback && (
@@ -495,7 +474,7 @@ export const SecurityDashboard = ({ activeTab = 'gate-console', onNavigate }) =>
               </div>
             )}
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block font-semibold text-slate-700 mb-1">Visitor Name *</label>
                 <input
@@ -519,16 +498,29 @@ export const SecurityDashboard = ({ activeTab = 'gate-console', onNavigate }) =>
               </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
               <div>
                 <label className="block font-semibold text-slate-700 mb-1">Destination Flat *</label>
-                <input
-                  type="text"
-                  placeholder="e.g. A-101"
+                <select
+                  required
                   value={walkinFlat}
-                  onChange={(e) => setWalkinFlat(e.target.value.toUpperCase())}
+                  onChange={(e) => {
+                    const chosen = e.target.value;
+                    setWalkinFlat(chosen);
+                    const matched = registeredFlats.find(f => f.flatNumber === chosen);
+                    setWalkinWing(matched?.wing || '');
+                  }}
                   className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-mono font-bold"
-                />
+                >
+                  <option value="">
+                    {loadingFlats ? 'Loading registered flats...' : '-- Select Registered Flat --'}
+                  </option>
+                  {registeredFlats.map((f) => (
+                    <option key={f._id || f.flatNumber} value={f.flatNumber}>
+                      Flat {f.flatNumber} {f.wing ? `(${f.wing})` : ''} {f.primaryResident?.name ? `• ${f.primaryResident.name}` : ''}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div>
@@ -559,8 +551,8 @@ export const SecurityDashboard = ({ activeTab = 'gate-console', onNavigate }) =>
 
             <button
               type="submit"
-              disabled={walkinSubmitting}
-              className="w-full py-3 bg-teal-800 hover:bg-teal-700 disabled:opacity-50 text-white font-bold rounded-2xl text-xs transition shadow-md mt-2 flex items-center justify-center gap-1.5"
+              disabled={walkinSubmitting || !walkinFlat}
+              className="w-full py-3 bg-teal-800 hover:bg-teal-700 disabled:opacity-50 text-white font-bold rounded-2xl text-xs transition shadow-md mt-2 flex items-center justify-center gap-1.5 cursor-pointer"
             >
               {walkinSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserCheck className="w-4 h-4" />}
               Send Approval Request to Resident
@@ -662,6 +654,60 @@ export const SecurityDashboard = ({ activeTab = 'gate-console', onNavigate }) =>
           </table>
         </div>
       </div>
+
+      {/* Delete Walk-in Request Confirmation Modal */}
+      {deletingVisitor && typeof document !== 'undefined' && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 animate-in fade-in">
+          <div className="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-slate-200 space-y-4">
+            <div className="flex items-center gap-3 text-rose-600">
+              <div className="w-10 h-10 rounded-2xl bg-rose-50 flex items-center justify-center shrink-0">
+                <Trash2 className="w-5 h-5 stroke-[2.2]" />
+              </div>
+              <div>
+                <h3 className="font-bold text-slate-900 text-sm font-display">
+                  Delete Walk-in Request?
+                </h3>
+                <p className="text-[11px] text-slate-500">
+                  Cancel and remove visitor registration
+                </p>
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-600 leading-relaxed">
+              Are you sure you want to remove the walk-in request for <strong className="text-slate-900">{deletingVisitor.name}</strong> (Destination: Flat <span className="font-mono font-bold text-teal-800">{deletingVisitor.flatNumber}</span>)?
+            </p>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setDeletingVisitor(null)}
+                className="px-4 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50 transition cursor-pointer"
+              >
+                Keep Request
+              </button>
+              <button
+                type="button"
+                onClick={confirmDeleteVisitor}
+                disabled={deletingLoading}
+                className="px-4 py-2 bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white font-bold rounded-xl text-xs shadow-md transition flex items-center gap-1.5 cursor-pointer"
+              >
+                {deletingLoading ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-3.5 h-3.5" />
+                    Delete Request
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
 
     </div>
   );

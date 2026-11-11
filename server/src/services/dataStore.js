@@ -1968,6 +1968,27 @@ class DataStore {
     return visitor;
   }
 
+  async deleteVisitor(id, societyId) {
+    await this.ensureSeeded();
+    if (this.isMongoConnected()) {
+      const query = mongoose.isValidObjectId(id)
+        ? { _id: id }
+        : { visitorNumber: id };
+      if (societyId) {
+        query.societyId = societyId;
+      }
+      const deleted = await Visitor.findOneAndDelete(query);
+      return deleted ? (deleted.toObject ? deleted.toObject() : deleted) : null;
+    }
+
+    const idx = this.visitors.findIndex(v =>
+      (v._id?.toString() === id?.toString() || v.visitorNumber === id) &&
+      (!societyId || v.societyId?.toString() === societyId?.toString())
+    );
+    if (idx === -1) return null;
+    return this.visitors.splice(idx, 1)[0];
+  }
+
   // ==========================================
   // MILESTONE 5: DELIVERIES MANAGEMENT
   // ==========================================

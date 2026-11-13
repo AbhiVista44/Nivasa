@@ -10,8 +10,26 @@ import { Building2, X } from 'lucide-react';
 
 export const DashboardLayout = () => {
   const { role, society } = useAuth();
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab, setActiveTab] = useState(() => {
+    if (role === 'security') return 'gate-console';
+    if (role === 'vendor') return 'assigned-jobs';
+    if (role === 'resident') return 'home';
+    return 'overview';
+  });
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // Sync default tab if role switches
+  useEffect(() => {
+    if (role === 'security') {
+      if (activeTab !== 'deliveries' && activeTab !== 'gate-console') {
+        setActiveTab('gate-console');
+      }
+    } else if (role === 'vendor') {
+      if (!['assigned-jobs', 'schedule', 'history', 'profile'].includes(activeTab)) {
+        setActiveTab('assigned-jobs');
+      }
+    }
+  }, [role]);
 
   // Close mobile drawer on Escape key press
   useEffect(() => {

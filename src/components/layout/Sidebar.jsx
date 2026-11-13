@@ -11,9 +11,7 @@ import {
   Briefcase,
   History,
   KeyRound,
-  UserCheck,
   Building,
-  AlertTriangle,
   Clock
 } from 'lucide-react';
 
@@ -44,11 +42,7 @@ export const Sidebar = ({ activeTab, onSelectTab, isMobileDrawer = false }) => {
     ],
     security: [
       { id: 'gate-console', label: 'Gate Console', icon: ShieldCheck },
-      { id: 'scan-pass', label: 'Passcode Verification', icon: KeyRound },
-      { id: 'walk-in', label: 'Walk-In Registration', icon: UserCheck },
-      { id: 'deliveries', label: 'Delivery Entry', icon: Package },
-      { id: 'inside-roster', label: 'Inside Society (Live)', icon: Users, badge: 'Live' },
-      { id: 'emergency', label: 'Emergency Alert', icon: AlertTriangle, danger: true },
+      { id: 'deliveries', label: 'Delivery Parcel Log', icon: Package },
     ],
     vendor: [
       { id: 'assigned-jobs', label: 'Assigned Jobs', icon: Wrench },

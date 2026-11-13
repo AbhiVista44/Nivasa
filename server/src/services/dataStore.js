@@ -1661,11 +1661,14 @@ class DataStore {
   async getInsideVisitors(societyId) {
     await this.ensureSeeded();
     if (this.isMongoConnected()) {
-      return await Visitor.find({ societyId, status: 'Inside' }).sort({ entryTime: -1 });
+      return await Visitor.find({
+        societyId,
+        status: { $in: ['Inside', 'Approved'] }
+      }).sort({ entryTime: -1, updatedAt: -1 });
     }
     return this.visitors
-      .filter(v => v.status === 'Inside' && (!societyId || v.societyId.toString() === societyId.toString()))
-      .sort((a, b) => new Date(b.entryTime || Date.now()) - new Date(a.entryTime || Date.now()));
+      .filter(v => ['Inside', 'Approved'].includes(v.status) && (!societyId || v.societyId.toString() === societyId.toString()))
+      .sort((a, b) => new Date(b.entryTime || b.updatedAt || Date.now()) - new Date(a.entryTime || a.updatedAt || Date.now()));
   }
 
   async getPendingApprovals(societyId, flatNumber) {
@@ -1905,13 +1908,14 @@ class DataStore {
 
   async respondToApproval(id, approved, notes, resident) {
     await this.ensureSeeded();
-    const stage = approved ? 'Approved' : 'Rejected';
+    const isApproved = !!approved;
+    const stage = isApproved ? 'Inside' : 'Rejected';
     const timelineEvent = {
-      stage: `Resident ${stage}`,
+      stage: isApproved ? 'Resident Approved & Entry Authorized' : 'Resident Rejected',
       timestamp: new Date(),
       actor: resident?.name || 'Resident',
-      role: 'resident',
-      note: notes || (approved ? 'Entry approved by resident.' : 'Entry denied by resident.'),
+      role: resident?.role || 'resident',
+      note: notes || (isApproved ? 'Entry approved by resident. Visitor admitted inside.' : 'Entry denied by resident.'),
     };
 
     if (this.isMongoConnected()) {
@@ -1920,6 +1924,12 @@ class DataStore {
         : await Visitor.findOne({ visitorNumber: id });
       if (!visitor) return null;
       visitor.status = stage;
+      if (isApproved) {
+        visitor.entryTime = new Date();
+      }
+      if (resident?.name && !visitor.hostResidentName) {
+        visitor.hostResidentName = resident.name;
+      }
       visitor.approvalNotes = notes || '';
       visitor.timeline.push(timelineEvent);
       visitor.updatedAt = new Date();
@@ -1930,6 +1940,12 @@ class DataStore {
     const visitor = this.visitors.find(v => v._id?.toString() === id?.toString() || v.visitorNumber === id);
     if (!visitor) return null;
     visitor.status = stage;
+    if (isApproved) {
+      visitor.entryTime = new Date();
+    }
+    if (resident?.name && !visitor.hostResidentName) {
+      visitor.hostResidentName = resident.name;
+    }
     visitor.approvalNotes = notes || '';
     visitor.timeline = visitor.timeline || [];
     visitor.timeline.push(timelineEvent);

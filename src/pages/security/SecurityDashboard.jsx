@@ -605,7 +605,7 @@ export const SecurityDashboard = ({ activeTab = 'gate-console', onNavigate }) =>
                 </tr>
               ) : (
                 insideVisitors.map((v) => {
-                  const entryDate = v.entryTime ? new Date(v.entryTime) : null;
+                  const entryDate = v.entryTime ? new Date(v.entryTime) : (v.updatedAt ? new Date(v.updatedAt) : null);
                   const timeFormatted = entryDate ? entryDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Recently';
 
                   return (
